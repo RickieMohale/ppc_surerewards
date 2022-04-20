@@ -336,6 +336,7 @@ def main():
 		num_bags =pd.read_sql_query("select cast(r.createdAt as date) as date,sum(ppc_surebuild + ppc_surecast + ppc_surecem + ppc_suretech + ppc_surewall) as number_of_bags from receipts as r inner join receiptdata as rdata on r.id =rdata.receipt_id where r.status in ('approved','Limit reached.') and cast(r.createdAt as date)  between '2022-02-15' and current_date() group by date" ,conn)
 		
 		num_reg =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users where cast(createdAt as date) >= '2022-02-15'  group by date order by date",conn)
+		num_reg_total =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users group by date order by date",conn)
 		num_promo_reg = pd.read_sql_query("Select cast(createdAt as date) as date,count(*) as No_Promocode from users where code = 'PPC130' and cast(createdAt as date)>='2022-02-15'  group by date order by Date",conn)
 		num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) >='2022-02-15'  group by date",conn)
 		num_valid_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
@@ -459,7 +460,7 @@ def main():
 
 
 		st.markdown("<h3 style='text-align: center; color: red;'>Surerewards Customers</h3>", unsafe_allow_html=True)
-		metric_row({ " Total No Of Surerewards Customers ": num_reg['num_of_reg'].sum(),"Customers With PPC130 Promo Code": num_promo_reg['No_Promocode'].sum(),"Total No Of Bags": round(num_bags["number_of_bags"].sum()) })
+		metric_row({ " Total No Of Surerewards Customers ": num_reg_total['num_of_reg'].sum()," Total No Of Customers from PPC130 Campaign ": num_reg['num_of_reg'].sum(),"Customers With PPC130 Promo Code": num_promo_reg['No_Promocode'].sum(),"Total No Of Bags": round(num_bags["number_of_bags"].sum()) })
 
 		st.markdown("<h3 style='text-align: center; color: red;'>Customer Receipts Upload</h3>", unsafe_allow_html=True)
 		metric_row( {"Total No of Receipts Upload": num_receipts['no_of_receipts_upload'].sum(),"Total No of Valid Receipts": num_valid_receipts["no_of_valid_receipts"].sum(),"Total No of Invalid Receipts":num_invalid_receipts["no_of_invalid_receipts"].sum()})
