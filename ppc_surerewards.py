@@ -22,7 +22,7 @@
 
 """
 # Streamlit dependencies
-import streamlit as st
+#import streamlit as st
 #import joblib,os
 
 # Data dependencies
@@ -54,7 +54,11 @@ import datetime
 from datetime import datetime
 import pytz
 
-# Vectorizer
+
+
+#########
+
+
 
 #tweet_cv = joblib.load(news_vectorizer) # loading your vectorizer from the pkl file
 
@@ -132,9 +136,24 @@ def main():
 	# Creating sidebar with selection box -
 	# you can create multiple pages this way
 	
-	options = ["Surerewards Insights","Prediction Page"]
+	options = ["Surerewards Insights","Prediction Page","Product Performance","Customer Location","Auto Reports"]
 	selection = st.sidebar.selectbox("Select Page", options)
 
+
+
+
+	if selection == "Customer Location":
+		df = pd.DataFrame(np.random.randn(1000, 2) / [1, 1] + [-25.99, 28.13],
+		columns=['lat','lon'])
+		#[-25.993138, 28.128150]
+		
+		st.map(df)
+
+	"Auto Reports"
+
+	if selection == "Auto Reports":
+
+		st.info("test")
 
 
 
@@ -333,7 +352,7 @@ def main():
 	
 
 		# Loaading Datasets
-		num_bags =pd.read_sql_query("select cast(r.createdAt as date) as date,sum(ppc_surebuild + ppc_surecast + ppc_surecem + ppc_suretech + ppc_surewall) as number_of_bags from receipts as r inner join receiptdata as rdata on r.id =rdata.receipt_id where r.status in ('approved','Limit reached.') and cast(r.createdAt as date)  between '2022-02-15' and current_date() group by date" ,conn)
+		num_bags =pd.read_sql_query("select cast(r.updatedAt as date) as date,sum(ppc_surebuild + ppc_surecast + ppc_surecem + ppc_suretech + ppc_surewall) as number_of_bags from receipts as r inner join receiptdata as rdata on r.id =rdata.receipt_id where r.status in ('approved','Limit reached.') and cast(r.updatedAt as date)  between '2022-02-15' and current_date() group by date" ,conn)
 		
 		num_reg =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users where cast(createdAt as date) >= '2022-02-15'  group by date order by date",conn)
 		num_reg_total =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users group by date order by date",conn)
@@ -452,15 +471,22 @@ def main():
 
 		## Space
 
-		import warnings
-		warnings.filterwarnings("ignore")
+
 
 		
 		st.markdown("<h2 style='text-align: center; color: black;'>Key Performance Indicators ( KPIs ).</h2>", unsafe_allow_html=True)
 
+		
+		
+
+
+		
 
 		st.markdown("<h3 style='text-align: center; color: red;'>Surerewards Customers</h3>", unsafe_allow_html=True)
+	
 		metric_row({ " Total No Of Surerewards Customers ": num_reg_total['num_of_reg'].sum()," Total No Of Customers from PPC130 Campaign ": num_reg['num_of_reg'].sum(),"Customers With PPC130 Promo Code": num_promo_reg['No_Promocode'].sum(),"Total No Of Bags": round(num_bags["number_of_bags"].sum()) })
+
+		#@st.cache(suppress_st_warning=True, allow_output_mutation=True)
 
 		st.markdown("<h3 style='text-align: center; color: red;'>Customer Receipts Upload</h3>", unsafe_allow_html=True)
 		metric_row( {"Total No of Receipts Upload": num_receipts['no_of_receipts_upload'].sum(),"Total No of Valid Receipts": num_valid_receipts["no_of_valid_receipts"].sum(),"Total No of Invalid Receipts":num_invalid_receipts["no_of_invalid_receipts"].sum()})
@@ -469,10 +495,34 @@ def main():
 		metric_row( {"Total No of Users With Recipets Upload": num_user_r_upload['no_of_receipts_upload'].sum(),"Total No of Users With Valid Receipts": num_user_valid_receipts["no_of_users_valid_receipts"].sum(),"Total No of Users With Invalid Receipts":num_user_invalid_receipts["no_of_users_invalid_receipts"].sum()})
 		warnings.filterwarnings("ignore")
 
-		#col1, col2, col3 = st.columns(3)
-		#col1.metric("Temperature","70 °F",  "1.2 °F")
-		#col2.metric("Wind", "9 mph", "-8%")
-		#col3.metric("Humidity", "86%", "4%")
+		col1, col2, col3 = st.columns(3)
+		col1.metric("Temperature","70 °F")
+		col2.metric("Wind", "9 mph")
+		col3.metric("Humidity", "86%")
+
+
+		#metrics= st.columns()
+
+		col1, col2, col3 = st.columns(3)
+
+		col1.metric("Total No of Users With Recipets Upload", 1000)	
+		col2.metric("Total No of Users With Valid Receipts", 1000)	
+		col3.metric("Total No of Users With Invalid Receipts", 1000)
+
+		metric("Total No of Users With Invalid Receipts", 1000)
+		#def metric_row(data):
+		#	#for i, (label, value) in enumerate(data.items()):
+		#	#	with columns[i]:
+		#	#		components.html(_build_metric(label, value))
+
+		#def metric(label, value):
+		#	components.html(_build_metric(label, value))
+
+
+
+
+
+
 
 
 
