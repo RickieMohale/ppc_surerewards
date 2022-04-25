@@ -22,8 +22,8 @@
 
 """
 # Streamlit dependencies
-#import streamlit as st
-#import joblib,os
+import streamlit as st
+import joblib,os
 
 # Data dependencies
 import pandas as pd
@@ -41,10 +41,16 @@ import pymysql
 import warnings
 warnings.filterwarnings("ignore")
 
+## hiding warnings
+st.set_option('deprecation.showPyplotGlobalUse', False)
 
-
+## Ploting Labraries
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import altair as alt
+
+
+
 import numpy as np
 import datetime
 
@@ -53,6 +59,9 @@ import datetime
 ## Writing the latest time update
 from datetime import datetime
 import pytz
+
+### Other tools
+import operator
 
 
 
@@ -109,6 +118,19 @@ def main():
 	with col3:
 		st.write("")
 
+
+
+
+
+	st.info("The following visuals are based on real time data from the surerewards platform (They change with time)")
+
+	## Show the latest Update Time
+	from datetime import datetime
+
+	SA_time = pytz.timezone('Africa/Johannesburg') 
+	datetime_SA = datetime.now(SA_time)
+	metric("Latest Time Update", datetime_SA.strftime('%Y-%m-%d %H:%M %p'))
+
 	def line_graph(source, x, y):
 		# Create a selection that chooses the nearest point & selects based on x-value
 		hover = alt.selection_single(fields=[x],nearest=True,on="mouseover",empty="none",	)
@@ -125,8 +147,20 @@ def main():
 	
 	
 
-
-
+    ### A function that takes a list and return unique name and their count
+	def unique_names(list):
+        
+		unique={}
+    
+		for i in list:
+			if i in unique.keys():
+				unique[i] =unique[i]+1
+			else:
+				unique[i]=1
+ 		#sort using tuple
+		tup =sorted(unique.items(), key=operator.itemgetter(1), reverse=True)
+		dict_ = dict((x, y) for x, y in tup)
+		return  dict_
 
 
 
@@ -136,20 +170,384 @@ def main():
 	# Creating sidebar with selection box -
 	# you can create multiple pages this way
 	
-	options = ["Surerewards Insights","Prediction Page","Product Performance","Customer Location","Auto Reports"]
-	selection = st.sidebar.selectbox("Select Page", options)
+	options = ["Surerewards Customers","Prediction Page","Product Performance","Customer Location"]
+	#,"Auto Reports"
+
+	selection = st.sidebar.radio("Select Page:",options)
+	#selection = st.sidebar.selectbox("Select Page", options)
+
+
+
+	if selection == "Product Performance":
+
+
+		df_receiptdata=pd.read_sql_query("SELECT mechant,location,action as platform_massage,cast(createdAt as date) as receipt_upload_date,cast(updatedAt as date) as receipt_captured_date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata ",conn)
+
+
+		### split data into city and province
+		df_receiptdata[['city','province','mixed_location']] = df_receiptdata['location'].str.split(',', expand=True)
+		df_receiptdata.drop('location', axis=1, inplace=True)
+
+		#Removing white spaces
+		df_receiptdata['city'] = df_receiptdata['city'].str.strip() 
+		df_receiptdata['province'] = df_receiptdata['province'].str.strip()
+		df_receiptdata['mechant'] = df_receiptdata['mechant'].str.strip()
+
+		#lowering all letters
+		df_receiptdata['city'] =df_receiptdata['city'].str.lower()
+		df_receiptdata['province'] = df_receiptdata['province'].str.lower()
+		df_receiptdata['mechant'] = df_receiptdata['mechant'].str.lower()
+
+
+		#Removing all punctuations
+
+		df_receiptdata['city'] =df_receiptdata['city'].str.replace(r'[^\w\s]+', '', regex=True)
+		df_receiptdata['province'] = df_receiptdata['province'].str.replace(r'[^\w\s]+', '', regex=True)
+		df_receiptdata['mechant'] = df_receiptdata['mechant'].str.replace(r'[^\w\s]+', '', regex=True)
+
+		
+		#Removing all numbers from strings
+
+		df_receiptdata['city'] =df_receiptdata['city'].str.replace('\d+', '', regex=True)
+		df_receiptdata['province'] = df_receiptdata['province'].str.replace('\d+', '', regex=True)
+		df_receiptdata['mechant'] = df_receiptdata['mechant'].str.replace('\d+', '', regex=True)
+
+
+
+
+
+
+		df_receiptdata['Total number of bags'] =df_receiptdata['ppc_surebuild']+df_receiptdata['ppc_surecem'] +df_receiptdata['ppc_surecast']+df_receiptdata['ppc_suretech']+df_receiptdata['ppc_surewall']+df_receiptdata['ppc_sureroad']+df_receiptdata['ppc_plaster']+df_receiptdata['ppc_motor']
+
+		## Taking posative Values
+		df_receiptdata = df_receiptdata[df_receiptdata['Total number of bags']>0]
+
+		df_receiptdata['ppc_motor'] = df_receiptdata['ppc_motor'].abs()
+
+        ## Receipt data from  PPC130 Campaign
+		PPC130_receiptdata = df_receiptdata [df_receiptdata['receipt_upload_date']>=pd.to_datetime("'2022-02-15'").date()]
+
+
+		### Visulaising The number by bags during campaign
+		campaign_bags = PPC130_receiptdata.groupby(['receipt_captured_date'])[['Total number of bags']].apply(lambda x : x.astype(int).sum())
+
+		campaign_bags ["delta"] = (PPC130_receiptdata ['Total number of bags'].pct_change()).fillna(0)
+
+		# Index to column
+		campaign_bags= campaign_bags.reset_index(level=0)
+
+		## Number Of Bags Visual
+		st.markdown("<h4 style='text-align: center; color: black;'>The visual below shows the number of bags bought by surerewards customers.</h4>", unsafe_allow_html=True)
+		st.altair_chart(line_graph(campaign_bags ,'receipt_captured_date','Total number of bags'), use_container_width=True)
+
+
+		## Grouping By Weekday
+		PPC130_receiptdata['receipt_upload_date'] = pd.to_datetime(PPC130_receiptdata['receipt_upload_date'], errors='coerce')
+		PPC130_receiptdata['weekday'] = PPC130_receiptdata['receipt_upload_date'].dt.day_name()
+
+
+		## Numbers of bags by weekday
+
+
+		mean_weekday =PPC130_receiptdata.groupby(['weekday']).mean()
+		sum_weekday =PPC130_receiptdata.groupby(['weekday']).sum()
+
+		sorted_weekdays = ['Sunday','Saturday','Friday','Thursday','Wednesday','Tuesday','Monday']
+
+		sort_mean_week_dct={}
+		sort_sum_week_dct={}
+		for i in sorted_weekdays:
+			sort_mean_week_dct[i]=round(mean_weekday['Total number of bags'][i])
+			sort_sum_week_dct[i]=round(sum_weekday['Total number of bags'][i])
+
+		plot_week=pd.DataFrame(index=sorted_weekdays)
+		plot_week['Average']=sort_mean_week_dct.values()
+		plot_week['Total']=sort_sum_week_dct.values()
+
+
+		
+		#st.dataframe(PPC130_receiptdata)
+
+
+		## Number of registration Visual
+		st.markdown("<h5 style='text-align: center; color: black;'>The visual below shows the average and total number of bags bought buy surerewards customer by weekday.</h5>", unsafe_allow_html=True)
+		
+
+		fig, ax = plt.subplots(figsize=(10,5))
+		plt.tight_layout()
+
+		y = np.arange(len(sorted_weekdays))  # Label locations
+		width = 0.4
+
+		ax.barh(y + width/2, plot_week['Average'], width, label='Average')
+		ax.barh(y - width/2, plot_week['Total'], width, label='Total')
+
+		# Format ticks
+		ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+
+		# Create labels
+		rects = ax.patches
+		for rect in rects:
+			
+    		# Get X and Y placement of label from rect.
+			x_value = rect.get_width()
+			y_value = rect.get_y() + rect.get_height() / 2
+			space = 5
+			ha = 'left'
+			if x_value < 0:
+				space *= -1
+				ha = 'right'
+			label = '{:.0f}'.format(x_value)
+			plt.annotate(label,(x_value, y_value), xytext=(space, 0),textcoords='offset points',va='center',ha=ha)
+
+		# Set y-labels and legend
+		ax.set_yticklabels(sorted_weekdays)
+		ax.legend(loc='lower right')
+		ax.spines['right'].set_visible(False)
+		ax.spines['top'].set_visible(False)
+		# To show each y-label, not just even ones
+		plt.yticks(np.arange(min(y), max(y)+1, 1.0))
+		st.pyplot(fig)
+
+
+
+		st.markdown("<h3 style='text-align: center; color: red;'>Overall Product Performance </h3>", unsafe_allow_html=True)
+
+
+
+
+
+		container = st.container()
+		col1, col2,col3 = st.columns(3)
+
+		with container:
+			with col1:
+				metric("Total No of bags from Surerewards Customers", df_receiptdata['Total number of bags'].sum())	
+
+			with col2:
+				metric("Total No of bags from PPC130 Campaign Customers ", PPC130_receiptdata['Total number of bags'].sum())
+			with col3:
+				metric("Total No of bags before PPC130 Campaign", df_receiptdata['Total number of bags'].sum() -PPC130_receiptdata['Total number of bags'].sum())
+
+			
+		fig1, ax1 = plt.subplots()
+		labels =["Before PPC130 Campaign", "PPC130 Campaign "]
+		sizes = [ df_receiptdata['Total number of bags'].sum() -PPC130_receiptdata['Total number of bags'].sum(),PPC130_receiptdata['Total number of bags'].sum()]
+		ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
+	
+		st.pyplot(fig1)
+
+
+		
+		st.markdown("<h3 style='text-align: center; color: red;'>PPC Product performance </h3>", unsafe_allow_html=True)
+
+
+		container = st.container()
+		col1, col2,col3,col4 = st.columns(4)
+
+		with container:
+			with col1:
+				metric('ppc_surebuild', df_receiptdata['ppc_surebuild'].sum())	
+
+			with col2:
+				metric('ppc_surecem',df_receiptdata['ppc_surecem'].sum() )
+			with col3:
+				metric('ppc_surecast', df_receiptdata['ppc_surecast'].sum())
+
+			with col4:
+				metric('ppc_suretech', df_receiptdata['ppc_suretech'].sum())
+
+
+		
+		container = st.container()
+		col1, col2,col3,col4 = st.columns(4)
+
+		with container:
+			with col1:
+				metric('ppc_surewall', df_receiptdata['ppc_surewall'].sum())	
+
+			with col2:
+				metric('ppc_sureroad',df_receiptdata['ppc_sureroad'].sum())
+			with col3:
+				metric('ppc_plaster', df_receiptdata['ppc_plaster'].sum())
+
+			with col4:
+				metric('ppc_motor', abs(df_receiptdata['ppc_motor'].sum()))
+
+
+		
+
+
+
+	
+
+		
+		product_name = ['ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+
+		product_values =[df_receiptdata['ppc_surebuild'].sum(),df_receiptdata['ppc_surecem'].sum() ,df_receiptdata['ppc_surecast'].sum(),df_receiptdata['ppc_suretech'].sum(),df_receiptdata['ppc_surewall'].sum(),df_receiptdata['ppc_sureroad'].sum(),df_receiptdata['ppc_plaster'].sum(),df_receiptdata['ppc_motor'].sum()]
+
+		df = pd.DataFrame({'PPC Products': product_name,  'Total No of Bags': product_values})
+		
+
+		plot = alt.Chart(df).mark_bar().encode(x='PPC Products', y='Total No of Bags')
+		st.altair_chart(plot, use_container_width=True)
+
+
+		#st.write('<style>div.row-widget.stRadio > div{flex-direction:row;justify-content: center;} </style>', unsafe_allow_html=True)
+
+		#st.write('<style>div.st-bf{flex-direction:column;} div.st-ag{font-weight:bold;padding-left:2px;}</style>', unsafe_allow_html=True)
+
+
+		st.markdown("<h3 style='text-align: center; color: red;'>Merchant  performance By Number Of bags and Sales Frequency</h3>", unsafe_allow_html=True)
+
+		top_mech=st.radio("Top Performing Merchant",("Top 10 Merchant","Top 20 Merchant"))
+		### Top Performing Machants
+
+		name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+
+		df =df_receiptdata.groupby(['mechant'])[name_].apply(lambda x : x.astype(int).sum())
+		sorted_df=df.sort_values('Total number of bags', ascending=False)
+
+		mechant_freq_dict = unique_names(df_receiptdata['mechant'])
+		data = {'merchant': mechant_freq_dict.keys(), 'Sales Frequency': mechant_freq_dict.values()}
+		mechant_freq_df = pd.DataFrame.from_dict(data)
+
+
+
+
+
+		if top_mech =="Top 10 Merchant":
+
+
+
+
+			container = st.container()
+			col1, col2 = st.columns(2)
+
+			with container:
+				with col1:
+
+					plot_df = sorted_df.head(10)
+					plot_df = plot_df.sort_values('Total number of bags', ascending=True)
+					plot_df = plot_df.drop(['Total number of bags'], axis = 1)
+
+
+
+
+					ax = plot_df.plot.barh(stacked=True,figsize=(10,5))
+
+
+					
+			
+
+
+					# add labels
+					ax.legend(loc='lower right')
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+					ax.set_ylabel("Merchant")
+					ax.set_xlabel("Number Of Bags")
+					st.pyplot(plt.show())
+	
+
+				with col2:
+	
+					plot_df =mechant_freq_df.head(10)
+					plot_df=plot_df.sort_values('Sales Frequency', ascending=True)
+
+
+					fig, ax = plt.subplots()
+					plt.tight_layout()
+
+
+					ax.barh(list(plot_df['merchant']) ,list(plot_df['Sales Frequency']))
+
+					ax.legend(loc='lower right')
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+
+					plt.ylabel('Merchant')
+					plt.xlabel('Sales Frequency')
+					st.pyplot(fig)
+
+		if top_mech =="Top 20 Merchant":
+
+
+
+
+			container = st.container()
+			col1, col2 = st.columns(2)
+
+			with container:
+				with col1:
+
+					### Setting to 20
+
+					plot_df = sorted_df.head(20)
+					plot_df = plot_df.sort_values('Total number of bags', ascending=True)
+					plot_df = plot_df.drop(['Total number of bags'], axis = 1)
+
+
+
+
+					ax = plot_df.plot.barh(stacked=True,figsize=(10,5))
+					plt.tight_layout()
+
+
+					
+			
+
+
+					# add labels
+					ax.legend(loc='lower right')
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+					ax.set_ylabel("Merchant")
+					ax.set_xlabel("Number Of Bags")
+					st.pyplot(plt.show())
+	
+
+				with col2:
+
+					### Setting to 20
+	
+					plot_df =mechant_freq_df.head(20)
+					plot_df=plot_df.sort_values('Sales Frequency', ascending=True)
+
+
+					fig, ax = plt.subplots()
+					plt.tight_layout()
+
+
+					ax.barh(list(plot_df['merchant']) ,list(plot_df['Sales Frequency']))
+
+					ax.legend(loc='lower right')
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+
+					plt.ylabel('Merchant')
+					plt.xlabel('Sales Frequency')
+					st.pyplot(fig)
+
+
+
 
 
 
 
 	if selection == "Customer Location":
+
+		#select latitude,longitude from userlocations
 		df = pd.DataFrame(np.random.randn(1000, 2) / [1, 1] + [-25.99, 28.13],
 		columns=['lat','lon'])
 		#[-25.993138, 28.128150]
-		
-		st.map(df)
+		position = pd.read_sql_query("select latitude as lat,longitude as lon from userlocations",conn)
 
-	"Auto Reports"
+
+		
+		st.map(position )
+
+
 
 	if selection == "Auto Reports":
 
@@ -336,17 +734,10 @@ def main():
 	
 	
 	# Building out the predication page
-	if selection == "Surerewards Insights":
+	if selection == "Surerewards Customers":
 		st.markdown("<h1 style='text-align: center; color: red;'>PPC130 Surerewards Insights</h1>", unsafe_allow_html=True)
 
-		st.info("The following visuals are based on lived data from the surerewards platform (They change with time)")
 
-		## Show the latest Update Time
-		from datetime import datetime
-
-		SA_time = pytz.timezone('Africa/Johannesburg') 
-		datetime_SA = datetime.now(SA_time)
-		metric("Latest Time Update", datetime_SA.strftime('%Y-%m-%d %H:%M %p'))
 		
 		
 	
@@ -355,26 +746,29 @@ def main():
 		num_bags =pd.read_sql_query("select cast(r.updatedAt as date) as date,sum(ppc_surebuild + ppc_surecast + ppc_surecem + ppc_suretech + ppc_surewall) as number_of_bags from receipts as r inner join receiptdata as rdata on r.id =rdata.receipt_id where r.status in ('approved','Limit reached.') and cast(r.updatedAt as date)  between '2022-02-15' and current_date() group by date" ,conn)
 		
 		num_reg =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users where cast(createdAt as date) >= '2022-02-15'  group by date order by date",conn)
-		num_reg_total =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users group by date order by date",conn)
-		num_promo_reg = pd.read_sql_query("Select cast(createdAt as date) as date,count(*) as No_Promocode from users where code = 'PPC130' and cast(createdAt as date)>='2022-02-15'  group by date order by Date",conn)
-		num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) >='2022-02-15'  group by date",conn)
-		num_valid_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
-		num_invalid_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
 
+		num_reg_ =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users where cast(createdAt as date) >= '2022-02-15'  ",conn)
+		num_reg_total =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users ",conn)
+
+		num_promo_reg = pd.read_sql_query("Select cast(createdAt as date) as date,count(*) as No_Promocode from users where code = 'PPC130'   ",conn)
+
+		num_receipts_total=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.')   group by date",conn)
+		num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) >='2022-02-15' group by date ",conn)
+		
+		num_valid_receipts_total =pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed')  group by date",conn)
+		num_valid_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  ",conn)
+
+		#num_invalid_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
+
+		num_user_r_upload_total=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.')  group by date",conn)
 		num_user_r_upload=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
-		
-		num_user_valid_receipts=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_users_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
-		num_user_invalid_receipts=pd.read_sql_query("SELECT count(distinct(users.id))as no_of_users_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
-		
-		num_bags["delta"] = (num_bags["number_of_bags"].pct_change()).fillna(0)
 
-		## Number Of Bags Visual
-		st.markdown("<h4 style='text-align: center; color: black;'>The visual below shows the number of bags bought by surerewards customers.</h4>", unsafe_allow_html=True)
-		st.altair_chart(line_graph(num_bags,"date","number_of_bags"), use_container_width=True)
+		num_user_valid_receipts_total=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_users_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed')  group by date",conn)
+		num_user_valid_receipts=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_users_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
+		#num_user_invalid_receipts=pd.read_sql_query("SELECT count(distinct(users.id))as no_of_users_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
 		
-		## Grouping By Weekday
-		num_bags['date'] = pd.to_datetime(num_bags['date'], errors='coerce')
-		num_bags['weekday'] = num_bags["date"].dt.day_name()
+	
+
 
 
 			
@@ -392,66 +786,12 @@ def main():
        
 	   
 	   
-		## Numbers of bags by weekday
-
-
-		mean_weekday =num_bags.groupby(['weekday']).mean()
-		sum_weekday =num_bags.groupby(['weekday']).sum()
-
-		sorted_weekdays = ['Sunday','Saturday','Friday','Thursday','Wednesday','Tuesday','Monday']
-
-		sort_mean_week_dct={}
-		sort_sum_week_dct={}
-		for i in sorted_weekdays:
-			sort_mean_week_dct[i]=round(mean_weekday['number_of_bags'][i])
-			sort_sum_week_dct[i]=round(sum_weekday['number_of_bags'][i])
-
-		plot_week=pd.DataFrame(index=sorted_weekdays)
-		plot_week['Average']=sort_mean_week_dct.values()
-		plot_week['Total']=sort_sum_week_dct.values()
 
 
 
 
- 		## Number of registration Visual
-		st.markdown("<h5 style='text-align: center; color: black;'>The visual below shows the average and total number of bags bought buy surerewards customer by weekday.</h5>", unsafe_allow_html=True)
-		
 
-		fig, ax = plt.subplots(figsize=(10,5))
-		plt.tight_layout()
 
-		y = np.arange(len(sorted_weekdays))  # Label locations
-		width = 0.4
-
-		ax.barh(y + width/2, plot_week['Average'], width, label='Average')
-		ax.barh(y - width/2, plot_week['Total'], width, label='Total')
-
-		# Format ticks
-		ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
-
-		# Create labels
-		rects = ax.patches
-		for rect in rects:
-			
-    		# Get X and Y placement of label from rect.
-			x_value = rect.get_width()
-			y_value = rect.get_y() + rect.get_height() / 2
-			space = 5
-			ha = 'left'
-			if x_value < 0:
-				space *= -1
-				ha = 'right'
-			label = '{:.0f}'.format(x_value)
-			plt.annotate(label,(x_value, y_value), xytext=(space, 0),textcoords='offset points',va='center',ha=ha)
-
-		# Set y-labels and legend
-		ax.set_yticklabels(sorted_weekdays)
-		ax.legend(loc='lower right')
-		ax.spines['right'].set_visible(False)
-		ax.spines['top'].set_visible(False)
-		# To show each y-label, not just even ones
-		plt.yticks(np.arange(min(y), max(y)+1, 1.0))
-		st.pyplot(fig)
 
 
 
@@ -482,34 +822,84 @@ def main():
 
 		
 
-		st.markdown("<h3 style='text-align: center; color: red;'>Surerewards Customers</h3>", unsafe_allow_html=True)
-	
-		metric_row({ " Total No Of Surerewards Customers ": num_reg_total['num_of_reg'].sum()," Total No Of Customers from PPC130 Campaign ": num_reg['num_of_reg'].sum(),"Customers With PPC130 Promo Code": num_promo_reg['No_Promocode'].sum(),"Total No Of Bags": round(num_bags["number_of_bags"].sum()) })
+		st.markdown("<h3 style='text-align: center; color: red;'>Number of  Customers</h3>", unsafe_allow_html=True)
 
-		#@st.cache(suppress_st_warning=True, allow_output_mutation=True)
+		container = st.container()
+		col1, col2,col3= st.columns(3)
+
+		with container:
+			with col1:
+				metric(" Total No Of Surerewards Customers ", num_reg_total['num_of_reg'].sum())	
+
+			with col2:
+				metric(" No Of Customers from PPC130 Campaign ",num_reg_['num_of_reg'].sum())
+			with col3:
+				metric("Customers With PPC130 Promo Code",num_promo_reg['No_Promocode'].sum())
 
 		st.markdown("<h3 style='text-align: center; color: red;'>Customer Receipts Upload</h3>", unsafe_allow_html=True)
-		metric_row( {"Total No of Receipts Upload": num_receipts['no_of_receipts_upload'].sum(),"Total No of Valid Receipts": num_valid_receipts["no_of_valid_receipts"].sum(),"Total No of Invalid Receipts":num_invalid_receipts["no_of_invalid_receipts"].sum()})
 
+		container = st.container()
+		col1, col2,col3,col4= st.columns(4)
+
+		with container:
+			with col1:
+				metric("Total No of Receipts Upload on Surerewards",  num_receipts_total['no_of_receipts_upload'].sum())	
+
+			with col2:
+				metric("No of Receipts Upload From PPC130 Campaign" ,num_receipts['no_of_receipts_upload'].sum())
+			with col3:
+				metric("Total No of Valid Receipts on Surerewards",num_valid_receipts_total["no_of_valid_receipts"].sum())
+
+			with col4:
+				metric("No of Valid Receipts From PPC130 Campaign",num_valid_receipts["no_of_valid_receipts"].sum())
+
+
+
+	
 		st.markdown("<h3 style='text-align: center; color: red;'>Customer Engagement</h3>", unsafe_allow_html=True)
-		metric_row( {"Total No of Users With Recipets Upload": num_user_r_upload['no_of_receipts_upload'].sum(),"Total No of Users With Valid Receipts": num_user_valid_receipts["no_of_users_valid_receipts"].sum(),"Total No of Users With Invalid Receipts":num_user_invalid_receipts["no_of_users_invalid_receipts"].sum()})
-		warnings.filterwarnings("ignore")
 
-		col1, col2, col3 = st.columns(3)
-		col1.metric("Temperature","70 °F")
-		col2.metric("Wind", "9 mph")
-		col3.metric("Humidity", "86%")
+		container = st.container()
+		col1, col2,col3,col4= st.columns(4)
+
+		with container:
+			with col1:
+				metric("Total No of Surerewards Customers With Recipets Upload",  num_user_r_upload_total['no_of_receipts_upload'].sum())	
+
+			with col2:
+				metric("PPC130 Campaign  Customers With Recipets Upload" ,num_user_r_upload['no_of_receipts_upload'].sum())
+			with col3:
+				metric("Total Surerewards Customers With Valid Recipets",num_user_valid_receipts_total["no_of_users_valid_receipts"].sum())
+
+			with col4:
+				metric("PPC130 Campaign Customers With Valid Recipets ",num_user_valid_receipts["no_of_users_valid_receipts"].sum())
+
+		
+		st.markdown("<h3 style='text-align: center; color: red;'>Customer Conversion By Valid Receipt Upload</h3>", unsafe_allow_html=True)
+
+		container = st.container()
+		col1, col2= st.columns(2)
+
+		with container:
+			with col1:
+				metric("Overall Conversion rate",   "{0:.0%}".format(num_user_valid_receipts_total["no_of_users_valid_receipts"].sum()/num_reg_total['num_of_reg'].sum()) )
+
+			with col2:
+				metric("PPC130 Campaign Conversion rate" , "{0:.0%}".format(num_user_valid_receipts["no_of_users_valid_receipts"].sum()/num_reg['num_of_reg'].sum()))
 
 
-		#metrics= st.columns()
+		
 
-		col1, col2, col3 = st.columns(3)
 
-		col1.metric("Total No of Users With Recipets Upload", 1000)	
-		col2.metric("Total No of Users With Valid Receipts", 1000)	
-		col3.metric("Total No of Users With Invalid Receipts", 1000)
 
-		metric("Total No of Users With Invalid Receipts", 1000)
+				
+
+				
+			
+
+			
+
+
+		
 		#def metric_row(data):
 		#	#for i, (label, value) in enumerate(data.items()):
 		#	#	with columns[i]:
