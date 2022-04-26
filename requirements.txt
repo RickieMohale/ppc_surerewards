@@ -10,4 +10,4 @@ streamlit==1.8.1
 streamlit_metrics==0.1.0
 sklearn
 keras
-pptx==0.2.6
+python-pptx==0.6.18
