@@ -64,6 +64,12 @@ import pytz
 import operator
 
 
+# import presentation packages 
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
+
+
 
 #########
 
@@ -146,6 +152,7 @@ def main():
 	
 	
 	
+	
 
     ### A function that takes a list and return unique name and their count
 	def unique_names(list):
@@ -170,11 +177,787 @@ def main():
 	# Creating sidebar with selection box -
 	# you can create multiple pages this way
 	
-	options = ["Surerewards Customers","Prediction Page","Product Performance","Customer Location"]
-	#,"Auto Reports"
+	options = ["Surerewards Customers","Prediction Page","Product Performance","Customer Location","Auto Reports"]
+	#
 
 	selection = st.sidebar.radio("Select Page:",options)
 	#selection = st.sidebar.selectbox("Select Page", options)
+
+	if selection == "Auto Reports":
+
+		st.info("This Page is for generating PPC130 reports.Time Frame Reports can be for weekly or weekend report")
+
+		report_type=st.radio("Select Report Type",("Daily Report","Time Frame Report"))
+
+		
+
+		if report_type == "Daily Report":
+
+			selected_date = st.date_input("Select Report Date")
+			st.write('Your Selected Date is:',selected_date)
+
+
+
+			num_reg =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users where cast(createdAt as date) between '2022-02-15' and '"+ str(selected_date)+"' group by date order by date",conn)
+					
+			num_reg['date'] =  pd.to_datetime(num_reg['date'])
+
+
+
+
+			df_receiptdata=pd.read_sql_query("SELECT mechant,location,action as platform_massage,cast(createdAt as date) as receipt_upload_date,cast(updatedAt as date) as receipt_captured_date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(updatedAt as date) = '"+ str(selected_date)+"'" ,conn)
+
+
+
+			df_receiptdata[['city','province']] = df_receiptdata['location'].str.split(',', expand=True)
+			df_receiptdata.drop('location', axis=1, inplace=True)
+
+
+			#Removing white spaces
+			df_receiptdata['city'] = df_receiptdata['city'].str.strip() 
+			df_receiptdata['province'] = df_receiptdata['province'].str.strip()
+			df_receiptdata['mechant'] = df_receiptdata['mechant'].str.strip()
+
+			#lowering all letters
+			df_receiptdata['city'] =df_receiptdata['city'].str.lower()
+			df_receiptdata['province'] = df_receiptdata['province'].str.lower()
+			df_receiptdata['mechant'] = df_receiptdata['mechant'].str.lower()
+
+
+			#Removing all punctuations
+
+			df_receiptdata['city'] =df_receiptdata['city'].str.replace(r'[^\w\s]+', '', regex=True)
+			df_receiptdata['province'] = df_receiptdata['province'].str.replace(r'[^\w\s]+', '', regex=True)
+			df_receiptdata['mechant'] = df_receiptdata['mechant'].str.replace(r'[^\w\s]+', '', regex=True)
+
+			
+			#Removing all numbers from strings
+
+			df_receiptdata['city'] =df_receiptdata['city'].str.replace('\d+', '', regex=True)
+			df_receiptdata['province'] = df_receiptdata['province'].str.replace('\d+', '', regex=True)
+			df_receiptdata['mechant'] = df_receiptdata['mechant'].str.replace('\d+', '', regex=True)			
+
+
+			df_receiptdata['Total number of bags'] =df_receiptdata['ppc_surebuild']+df_receiptdata['ppc_surecem'] +df_receiptdata['ppc_surecast']+df_receiptdata['ppc_suretech']+df_receiptdata['ppc_surewall']+df_receiptdata['ppc_sureroad']+df_receiptdata['ppc_plaster']+df_receiptdata['ppc_motor']
+
+			## Taking posative Values
+			df_receiptdata = df_receiptdata[df_receiptdata['Total number of bags']>0]
+
+			df_receiptdata['ppc_motor'] = df_receiptdata['ppc_motor'].abs()
+
+
+
+
+
+
+
+
+			if st.button("Get "+ str(selected_date)+" Daily Report"):
+				# Giving Image path 
+				ppc_Logo_path ="resources/imgs/PPC_Logo.png" 
+
+				top_left_path ="resources/imgs/top_left.png"
+				bottom_right_path ="resources/imgs/bottom_right.png"
+
+				small_logo_right_path ="resources/imgs/small_logo.png"
+
+				surerewads_path ="resources/imgs/surerewards.png"
+
+				analytics_path ="resources/imgs/AA_Logo.png"
+
+
+
+
+
+				# Creating an Presentation object
+				ppt = Presentation() 
+
+				# set width and height to 16 and 9 inches.
+				ppt.slide_width = Inches(16)
+				ppt.slide_height = Inches(9)
+				
+				# Selecting blank slide
+				blank_slide_layout = ppt.slide_layouts[6]
+
+
+				################### First Slide #####################
+
+				slide_one =st.empty()
+				with slide_one:
+				
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
+
+					
+					left = Inches(0)
+					top=Inches(0)
+					height = Inches(1) 
+					
+					pic = slide.shapes.add_picture(top_left_path, left,top, height = height)
+
+					left= Inches(11)
+					top=Inches(0.248)
+					height = Inches(1.26) 
+					width = Inches(2.866)
+					pic = slide.shapes.add_picture(surerewads_path, left,top,width =width,height = height)
+
+					left= Inches(0.8)
+					top=Inches(7.677)
+					height = Inches(1.248) 
+					width = Inches(1.299)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
+
+
+					left = Inches(1.409) 
+					height = Inches(1) 
+					top=Inches(2.291)
+
+					pic = slide.shapes.add_picture(ppc_Logo_path, left,top,width=None, height=None)
+
+
+					left= Inches(12.8386)
+					top=Inches(8)
+					height = Inches(1) 
+
+					pic = slide.shapes.add_picture(bottom_right_path, left,top, height = height)
+
+
+					left= Inches(3.2757)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+
+
+					###################### Adding text   #######################################
+
+					# For adjusting the Margins in inches
+					left= Inches(8.271)
+					top=Inches(3.24)
+					height = Inches(1.1969) 
+					width = Inches(4.0118)
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = "PPC130 "
+					p.font.bold = True
+					p.font.size = Pt(65)
+					p.font.color.rgb = RGBColor(255, 0, 0)
+					p.font.name = 'Arial'
+
+					################## Second Text     ###############################
+					# For adjusting the Margins in inches
+					
+					left= Inches(7.531)
+					top=Inches(4.583)
+					height = Inches(0.6063) 
+					width = Inches(6.083)
+
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+					#tf.text = "This is text inside a textbox"
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = "Surerewards Daily Insights"
+					p.font.bold = True
+					p.font.size = Pt(30)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+
+
+					################## Third Text Text     ###############################
+					# For adjusting the Margins in inches
+					
+					left= Inches(8.437)
+					top=Inches(5.1)
+					height = Inches(0.7063) 
+					width = Inches(3.681)
+
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+					#tf.text = "This is text inside a textbox"
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					x = pd.to_datetime(selected_date, format='%Y%m%d', errors='ignore')
+					p.text =str(x.strftime("%Y-%d-%B"))
+					p.font.bold = True
+					p.font.size = Pt(30)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+
+				#################### Report Outline ######################
+
+
+
+				report_outline =st.empty()
+
+				with report_outline :
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
+
+					
+					left = Inches(0)
+					top=Inches(0)
+					height = Inches(1) 
+					
+					pic = slide.shapes.add_picture(top_left_path, left,top, height = height)
+
+					left= Inches(11)
+					top=Inches(0.248)
+					height = Inches(1.26) 
+					width = Inches(2.866)
+					pic = slide.shapes.add_picture(surerewads_path, left,top,width =width,height = height)
+
+					left= Inches(0.8)
+					top=Inches(7.677)
+					height = Inches(1.248) 
+					width = Inches(1.299)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
+
+
+
+
+
+					left= Inches(12.8386)
+					top=Inches(8)
+					height = Inches(1) 
+
+					pic = slide.shapes.add_picture(bottom_right_path, left,top, height = height)
+
+
+					left= Inches(3.2757)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+					
+
+
+					###################### Adding text   #######################################
+
+					# For adjusting the Margins in inches
+					left= Inches(4.94)
+					top=Inches(0.06)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = "Report Outline "
+					p.font.bold = True
+					p.font.size = Pt(40)
+					p.font.color.rgb = RGBColor(255, 0, 0)
+					p.font.name = 'Arial'
+
+
+					############
+
+
+
+
+
+					left= Inches(1)
+					top=Inches(2.114)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width =width, height = height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+
+					p = tf.add_paragraph()
+					p.text = ' > Customer Registration'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+					
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Product Sales By Merchant'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+					
+
+					
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Product Sales By Location'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Products Sales Performance'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Product Sales By Date'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Product Sales By Region'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Customer Receipts Upload'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Customer Engagement'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Receipts Validation'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+				
+				####################  Customer Registration ################
+				
+				customer_reg=st.empty()
+
+				with customer_reg :
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
+
+					
+					left = Inches(0)
+					top=Inches(0)
+					height = Inches(1) 
+					
+					pic = slide.shapes.add_picture(top_left_path, left,top, height = height)
+
+					left= Inches(11)
+					top=Inches(0.248)
+					height = Inches(1.26) 
+					width = Inches(2.866)
+					pic = slide.shapes.add_picture(surerewads_path, left,top,width =width,height = height)
+
+					left= Inches(0.8)
+					top=Inches(7.677)
+					height = Inches(1.248) 
+					width = Inches(1.299)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
+
+
+
+
+
+					left= Inches(12.8386)
+					top=Inches(8)
+					height = Inches(1) 
+
+					pic = slide.shapes.add_picture(bottom_right_path, left,top, height = height)
+
+
+					left= Inches(3.2757)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+					
+
+
+					###################### Adding text   #######################################
+
+					# For adjusting the Margins in inches
+					left= Inches(3.5)
+					top=Inches(0.06)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = " Customer Registration "
+					p.font.bold = True
+					p.font.size = Pt(40)
+					p.font.color.rgb = RGBColor(255, 0, 0)
+					p.font.name = 'Arial'
+
+
+					################# Addding  Plot  ################################
+
+					chart = alt.Chart(num_reg).mark_area(line={'color':'darkgreen'},color=alt.Gradient(gradient='linear',stops=[alt.GradientStop(color='white', offset=0),alt.GradientStop(color='darkgreen', offset=1)],x1=1,x2=1,y1=1,y2=0)).encode(x = 'date',y = 'num_of_reg')
+					
+					#from altair_saver import save
+					#chart.save('chart.png')
+					#save(chart, "chart.png")
+
+
+
+					left= Inches(10)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					#pic = slide.shapes.add_picture(chart, left,top)
+
+                ################### Top Performing Merchant
+
+				Merchant_pef=st.empty()
+
+				with Merchant_pef:
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
+
+					
+					left = Inches(0)
+					top=Inches(0)
+					height = Inches(1) 
+					
+					pic = slide.shapes.add_picture(top_left_path, left,top, height = height)
+
+					left= Inches(11)
+					top=Inches(0.248)
+					height = Inches(1.26) 
+					width = Inches(2.866)
+					pic = slide.shapes.add_picture(surerewads_path, left,top,width =width,height = height)
+
+					left= Inches(0.8)
+					top=Inches(7.677)
+					height = Inches(1.248) 
+					width = Inches(1.299)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
+
+
+
+
+
+					left= Inches(12.8386)
+					top=Inches(8)
+					height = Inches(1) 
+
+					pic = slide.shapes.add_picture(bottom_right_path, left,top, height = height)
+
+
+					left= Inches(3.2757)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+					
+
+
+					###################### Adding text   #######################################
+
+					# For adjusting the Margins in inches
+					left= Inches(4)
+					top=Inches(0.06)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = " Top 20 Performing Merchant"
+					p.font.bold = True
+					p.font.size = Pt(35)
+					p.font.color.rgb = RGBColor(255, 0, 0)
+					p.font.name = 'Arial'
+
+
+
+
+					############## Adding Merchant Performance
+
+					#name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+
+					#df =df_receiptdata.groupby(['mechant'])[name_].apply(lambda x : x.astype(int).sum())
+					#sorted_df=df.sort_values('Total number of bags', ascending=False)
+
+					#mechant_freq_dict = unique_names(df_receiptdata['mechant'])
+					#data = {'merchant': mechant_freq_dict.keys(), 'Sales Frequency': mechant_freq_dict.values()}
+					#mechant_freq_df = pd.DataFrame.from_dict(data)
+
+
+
+					################# Top Performong Merchant By Sale Quantity
+					name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+
+					df =df_receiptdata.groupby(['mechant'])[name_].apply(lambda x : x.astype(int).sum())
+					sorted_df=df.sort_values('Total number of bags', ascending=False)
+
+
+					plot_df = sorted_df.head(20)
+					plot_df = plot_df.sort_values('Total number of bags', ascending=True)
+					plot_df = plot_df.drop(['Total number of bags'], axis = 1)
+
+
+					ax = plot_df.plot.barh(stacked=True)
+					plt.tight_layout()		
+
+					# add labels
+					ax.legend(loc='lower right')
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+					ax.set_ylabel("Merchant")
+					ax.set_xlabel("Number Of Bags")
+
+					plt.savefig('resources/plots/'+'top_mecharnt_by_no.png',bbox_inches='tight')
+					#st.pyplot(plt.show())
+
+
+					left= Inches(0.3)
+					top=Inches(2)
+					height = Inches(4) 
+					width = Inches(7)
+
+					top_mecharnt_by_no ="resources/plots/top_mecharnt_by_no.png"
+
+
+					#pic = slide.shapes.add_picture(top_mech_no , left,top,width =width,height = height)
+					pic = slide.shapes.add_picture(top_mecharnt_by_no , left, top,width,height)
+
+
+                    ############### Top Mechart by sales  frequency
+					mechant_freq_dict = unique_names(df_receiptdata['mechant'])
+					data = {'merchant': mechant_freq_dict.keys(), 'Sales Frequency': mechant_freq_dict.values()}
+					mechant_freq_df = pd.DataFrame.from_dict(data)
+
+
+					plot_df =mechant_freq_df.head(20)
+					plot_df=plot_df.sort_values('Sales Frequency', ascending=True)
+
+
+					fig, ax = plt.subplots()
+					plt.tight_layout()
+
+
+					ax.barh(list(plot_df['merchant']) ,list(plot_df['Sales Frequency']))
+
+					ax.legend(loc='lower right')
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+
+					plt.ylabel('Merchant')
+					plt.xlabel('Sales Frequency')
+
+
+					plt.savefig('resources/plots/'+'top_mecharnt_by_freq.png',bbox_inches='tight')
+					#st.pyplot(plt.show())
+
+
+					left= Inches(8)
+					top=Inches(2)
+					height = Inches(4) 
+					width = Inches(7)
+
+					top_mecharnt_by_freq ="resources/plots/top_mecharnt_by_freq.png"
+
+
+					#pic = slide.shapes.add_picture(top_mech_no , left,top,width =width,height = height)
+					pic = slide.shapes.add_picture(top_mecharnt_by_freq , left, top,width,height)
+
+
+					################ Adding Comment #######################
+
+					# creating textBox
+					left= Inches(1)
+					top=Inches(6)
+					height = Inches(1) 
+					width = Inches(15)
+
+
+					txBox = slide.shapes.add_textbox(left, top,width =width, height = height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Visual on the left shows top 20 merchant performing by product and the total number of bags'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(20)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+					
+					
+
+					
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Visual on the right shows top 20 merchant performance by the number of customers who made sales'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(20)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+
+
+
+
+					
+
+
+
+
+
+				#ppt.save("pptx-to-pdf-selected-slides.pdf",slides.export.SaveFormat.PDF)
+
+				#file =ppt.save('test_4.pptx')
+
+
+
+				#st.download_button('Download binary file', ppt)
+
+
+
+
+
+
+				############# Addding Content  #######################3
+
+
+
+
+
+				#slides = ppt.slides[0]
+				#for slide in slides:
+					
+
+
+				#	left= Inches(0)
+				#	top=Inches(8.4724)
+				#	height = Inches(0.4173) 
+				#	width = Inches(8.5079)
+
+
+				#	pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+				
+
+
+
+
+
+				# save file
+				ppt.save('test_4.pptx')
+
+
+
+
+		
+
+
 
 
 
@@ -279,7 +1062,7 @@ def main():
 		y = np.arange(len(sorted_weekdays))  # Label locations
 		width = 0.4
 
-		ax.barh(y + width/2, plot_week['Average'], width, label='Average')
+		#ax.barh(y + width/2, plot_week['Average'], width, label='Average')
 		ax.barh(y - width/2, plot_week['Total'], width, label='Total')
 
 		# Format ticks
@@ -549,9 +1332,7 @@ def main():
 
 
 
-	if selection == "Auto Reports":
-
-		st.info("test")
+		
 
 
 
