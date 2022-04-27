@@ -22,6 +22,7 @@
 
 """
 # Streamlit dependencies
+from ast import Str
 import streamlit as st
 import joblib,os
 
@@ -72,6 +73,12 @@ from pptx.dml.color import RGBColor
 
 
 #########
+import difflib
+
+# Helpers to format and locate ticks for dates
+from matplotlib.dates import DateFormatter, DayLocator
+import matplotlib.dates as mdates
+from matplotlib.dates import DateFormatter
 
 
 
@@ -170,6 +177,21 @@ def main():
 		return  dict_
 
 
+	# senstivity is the percentange of senstivity
+
+	def replace_similar_words(df,column,common_words,senstivity):
+		for i,row in df.iterrows():
+			for com_nam in common_words:
+				if df.at[i,column] !=None and len(df.at[i,column]) >0 :
+					if  df.at[i,column][0]==com_nam[0]:
+						seq = difflib.SequenceMatcher(None,df.at[i,column] ,com_nam)
+						if seq.ratio()*100>senstivity:
+							df.at[i,column] =com_nam
+						
+		return df
+
+
+
 
 
 	#st.subheader("Climate change tweet classification")
@@ -204,8 +226,29 @@ def main():
 
 
 
+			status=pd.read_sql_query("select status, count(*) as count from users as u join receipts as r on u.id = r.user_id where cast(r.createdAt as date) = '"+ str(selected_date)+"' and status != 'unprocessed' group by status",conn)
+
+
+
 
 			df_receiptdata=pd.read_sql_query("SELECT mechant,location,action as platform_massage,cast(createdAt as date) as receipt_upload_date,cast(updatedAt as date) as receipt_captured_date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(updatedAt as date) = '"+ str(selected_date)+"'" ,conn)
+
+
+			bags_by_date=pd.read_sql_query("SELECT cast(updatedAt as date) as date ,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(updatedAt as date) between '2022-02-15' and '"+ str(selected_date)+"'" ,conn)
+			bags_by_date['Total number of bags'] =bags_by_date['ppc_surebuild']+bags_by_date['ppc_surecem'] +bags_by_date['ppc_surecast']+bags_by_date['ppc_suretech']+bags_by_date['ppc_surewall']+bags_by_date['ppc_sureroad']+bags_by_date['ppc_plaster']+bags_by_date['ppc_motor']
+			
+			## Taking posative Values
+			bags_by_date = bags_by_date[bags_by_date['Total number of bags']>0]
+			bags_by_date['ppc_motor'] = bags_by_date['ppc_motor'].abs()
+
+
+			bags_by_date =bags_by_date.groupby(['date'])[['Total number of bags']].apply(lambda x : x.astype(int).sum())
+
+			# Index to column
+			bags_by_date= bags_by_date.reset_index(level=0)
+
+
+			bags_by_date['date'] =  pd.to_datetime(bags_by_date['date'])
 
 
 
@@ -244,6 +287,30 @@ def main():
 			df_receiptdata = df_receiptdata[df_receiptdata['Total number of bags']>0]
 
 			df_receiptdata['ppc_motor'] = df_receiptdata['ppc_motor'].abs()
+
+
+			#
+			## Replacing wrong captured name with correct ones
+			province_name =['limpopo','gauteng','mpumalanga','north west','free state','western cape','eastern cape','kwazulu natal','northern cape']
+
+
+			##### Replacing province name with true province name ################3
+
+			df_receiptdata=replace_similar_words(df_receiptdata,'province',province_name,80)
+
+
+			##### Replacing incorrect province with mode
+
+
+			prov_mode =df_receiptdata['province'].mode()[0]
+
+			for i,row in df_receiptdata.iterrows():
+				if df_receiptdata.at[i,'province'] not in province_name :
+					df_receiptdata.at[i,'province'] =prov_mode
+
+
+
+
 
 
 
@@ -523,7 +590,26 @@ def main():
 					p.font.size = Pt(24)
 					p.font.color.rgb = RGBColor(0, 0, 0)
 					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Product Sales By Date'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Products Sales Performance'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
 					
+
 					p = tf.add_paragraph()
 					p.line_spacing = Pt(40)
 					p.text = ' > Product Sales By Merchant'
@@ -545,24 +631,6 @@ def main():
 					p.font.name = 'Arial'
 
 
-					p = tf.add_paragraph()
-					p.line_spacing = Pt(40)
-					p.text = ' > Products Sales Performance'
-					p.level = 0
-					p.font.bold = True
-					p.font.size = Pt(24)
-					p.font.color.rgb = RGBColor(0, 0, 0)
-					p.font.name = 'Arial'
-
-
-					p = tf.add_paragraph()
-					p.line_spacing = Pt(40)
-					p.text = ' > Product Sales By Date'
-					p.level = 0
-					p.font.bold = True
-					p.font.size = Pt(24)
-					p.font.color.rgb = RGBColor(0, 0, 0)
-					p.font.name = 'Arial'
 
 					p = tf.add_paragraph()
 					p.line_spacing = Pt(40)
@@ -575,7 +643,7 @@ def main():
 
 					p = tf.add_paragraph()
 					p.line_spacing = Pt(40)
-					p.text = ' > Customer Receipts Upload'
+					p.text = ' > PPC130 Customer Receipts Upload'
 					p.level = 0
 					p.font.bold = True
 					p.font.size = Pt(24)
@@ -584,7 +652,7 @@ def main():
 
 					p = tf.add_paragraph()
 					p.line_spacing = Pt(40)
-					p.text = ' > Customer Engagement'
+					p.text = ' > PPC130 Customer Engagement'
 					p.level = 0
 					p.font.bold = True
 					p.font.size = Pt(24)
@@ -593,7 +661,7 @@ def main():
 
 					p = tf.add_paragraph()
 					p.line_spacing = Pt(40)
-					p.text = ' > Receipts Validation'
+					p.text = ' > PPC130 Receipts Validation'
 					p.level = 0
 					p.font.bold = True
 					p.font.size = Pt(24)
@@ -678,20 +746,239 @@ def main():
 					p.font.name = 'Arial'
 
 
+
+
 					################# Addding  Plot  ################################
 
-					chart = alt.Chart(num_reg).mark_area(line={'color':'darkgreen'},color=alt.Gradient(gradient='linear',stops=[alt.GradientStop(color='white', offset=0),alt.GradientStop(color='darkgreen', offset=1)],x1=1,x2=1,y1=1,y2=0)).encode(x = 'date',y = 'num_of_reg')
+
+
+
+					fig, ax = plt.subplots(figsize=(10, 6))
+
+
+					# Same, but add a stronger line on top (edge)
+					plt.fill_between( num_reg['date'] , num_reg['num_of_reg'] , color="red", alpha=0.2)
+					plt.plot(num_reg['date'] , num_reg['num_of_reg'] , color="black", alpha=0.6)
+					# See the line plot function to learn how to customize the plt.plot function
+
+
+					ax.set_ylabel('Number Of Registration')
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+
+					# Define the date format
+					date_form = DateFormatter("%b-%d")
+					ax.xaxis.set_major_formatter(date_form)
+
+
+
+					plt.savefig('resources/plots/cust_reg'+'.png',bbox_inches='tight')
 					
-					#from altair_saver import save
-					#chart.save('chart.png')
-					#save(chart, "chart.png")
+					left= Inches(0.5)
+					top=Inches(2)
+					height = Inches(4) 
+					width = Inches(7)
+
+					cust_reg ="resources/plots/cust_reg.png"
+
+
+					#pic = slide.shapes.add_picture(top_mech_no , left,top,width =width,height = height)
+					pic = slide.shapes.add_picture(cust_reg , left, top,width,height)
+
+
+					# creating textBox
+					left= Inches(7.5)
+					top=Inches(3)
+					height = Inches(1) 
+					width = Inches(15)
+
+
+					txBox = slide.shapes.add_textbox(left, top,width =width, height = height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > A total of '+ str(num_reg['num_of_reg'][len(num_reg)-1])+' customers registered on the surereward'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(20)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' platform  '+str(selected_date)
+					p.level = 1
+					p.font.bold = True
+					p.font.size = Pt(20)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+
+				### End of Reg ###
+
+
+				#############  Number Of Bags By Date  ###############
+
+
+				bags_by_=st.empty()
+
+				with bags_by_ :
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
+
+					
+					left = Inches(0)
+					top=Inches(0)
+					height = Inches(1) 
+					
+					pic = slide.shapes.add_picture(top_left_path, left,top, height = height)
+
+					left= Inches(11)
+					top=Inches(0.248)
+					height = Inches(1.26) 
+					width = Inches(2.866)
+					pic = slide.shapes.add_picture(surerewads_path, left,top,width =width,height = height)
+
+					left= Inches(0.8)
+					top=Inches(7.677)
+					height = Inches(1.248) 
+					width = Inches(1.299)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
 
 
 
-					left= Inches(10)
+
+
+					left= Inches(12.8386)
+					top=Inches(8)
+					height = Inches(1) 
+
+					pic = slide.shapes.add_picture(bottom_right_path, left,top, height = height)
+
+
+					left= Inches(3.2757)
 					top=Inches(8.4724)
 					height = Inches(0.4173) 
 					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+					
+
+
+					###################### Adding text   #######################################
+
+					# For adjusting the Margins in inches
+					left= Inches(3.5)
+					top=Inches(0.06)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = " Product Sale By Date "
+					p.font.bold = True
+					p.font.size = Pt(40)
+					p.font.color.rgb = RGBColor(255, 0, 0)
+					p.font.name = 'Arial'
+
+
+
+
+					################# Addding  Plot  ################################
+
+					
+
+
+
+
+					fig, ax = plt.subplots(figsize=(10, 6))
+
+
+					# Same, but add a stronger line on top (edge)
+					plt.fill_between( bags_by_date['date'] , bags_by_date['Total number of bags'] , color="red", alpha=0.2)
+					plt.plot(bags_by_date['date'] , bags_by_date['Total number of bags'] , color="black", alpha=0.6)
+					# See the line plot function to learn how to customize the plt.plot function
+
+
+
+
+
+					ax.set_ylabel('Number Of Bags')
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+
+
+					# Define the date format
+					date_form = DateFormatter("%b-%d")
+					ax.xaxis.set_major_formatter(date_form)
+
+
+
+					plt.savefig('resources/plots/bags_date'+'.png',bbox_inches='tight')
+					
+					left= Inches(0.5)
+					top=Inches(2)
+					height = Inches(4) 
+					width = Inches(7)
+
+					bags_date_img ="resources/plots/bags_date.png"
+
+
+
+					pic = slide.shapes.add_picture(bags_date_img, left, top,width,height)
+
+
+					# creating textBox
+					left= Inches(7.5)
+					top=Inches(3)
+					height = Inches(1) 
+					width = Inches(15)
+
+
+					txBox = slide.shapes.add_textbox(left, top,width =width, height = height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Surerewards customers bought a total of '+ str(bags_by_date['Total number of bags'][len(bags_by_date)-1])+' bags ' 
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(20)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' on the '+str(selected_date)
+					p.level = 1
+					p.font.bold = True
+					p.font.size = Pt(20)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+
+
+
 
 
 					#pic = slide.shapes.add_picture(chart, left,top)
@@ -701,6 +988,10 @@ def main():
 				Merchant_pef=st.empty()
 
 				with Merchant_pef:
+
+
+					
+					
 					# Attaching slide to ppt
 					slide = ppt.slides.add_slide(blank_slide_layout) 
 					
@@ -902,6 +1193,446 @@ def main():
 					p.font.color.rgb = RGBColor(0, 0, 0)
 					p.font.name = 'Arial'
 
+				recpt_upload=st.empty()
+
+				with recpt_upload:
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
+
+					
+					left = Inches(0)
+					top=Inches(0)
+					height = Inches(1) 
+					
+					pic = slide.shapes.add_picture(top_left_path, left,top, height = height)
+
+					left= Inches(11)
+					top=Inches(0.248)
+					height = Inches(1.26) 
+					width = Inches(2.866)
+					pic = slide.shapes.add_picture(surerewads_path, left,top,width =width,height = height)
+
+					left= Inches(0.8)
+					top=Inches(7.677)
+					height = Inches(1.248) 
+					width = Inches(1.299)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
+
+
+
+
+
+					left= Inches(12.8386)
+					top=Inches(8)
+					height = Inches(1) 
+
+					pic = slide.shapes.add_picture(bottom_right_path, left,top, height = height)
+
+
+					left= Inches(3.2757)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+
+					###################### Adding text   #######################################
+
+					# For adjusting the Margins in inches
+					left= Inches(4)
+					top=Inches(0.06)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = " PPC130 Receipt Upload"
+					p.font.bold = True
+					p.font.size = Pt(35)
+					p.font.color.rgb = RGBColor(255, 0, 0)
+					p.font.name = 'Arial'
+
+					############ Adding Plot #################
+
+					num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code !='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) = '"+str(selected_date)+"' ",conn)
+					num_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code ='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) ='"+str(selected_date)+"' ",conn)
+
+					num_valid_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code != 'PPC130' and status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) ='"+str(selected_date)+"' ",conn)
+					num_valid_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code  ='PPC130' and status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) = '"+str(selected_date)+"' ",conn)
+
+					num_invalid_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code  ='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) = '"+str(selected_date)+"' ",conn)
+					num_invalid_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code !='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) = '"+str(selected_date)+"' ",conn)
+					
+		
+					N = 3
+					No_Promo = (num_receipts['no_of_receipts_upload'].sum(), num_valid_receipts["no_of_valid_receipts"].sum(), num_invalid_receipts["no_of_invalid_receipts"].sum()  )
+					Promo = (num_promo_receipts['no_of_receipts_upload'].sum(), num_valid_promo_receipts["no_of_valid_receipts"].sum(),num_invalid_promo_receipts["no_of_invalid_receipts"].sum())
+					
+					ind = np.arange(N)    # the x locations for the groups
+					width = 0.35       # the width of the bars: can also be len(x) sequence
+
+
+
+					fig, ax = plt.subplots()
+					plt.tight_layout()
+
+					p1 = ax.bar(ind, Promo, width,  label='With PPC130')
+					p2 = ax.bar(ind, No_Promo, width,bottom=Promo, label='Without PPC130')
+
+					ax.axhline(0, color='grey', linewidth=0.8)
+					ax.set_ylabel('Number Of Receipts ')
+					
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+					ax.set_xticks(ind,labels=['Total', 'Valid', 'Invalid'])
+					ax.legend()
+
+					# Label with label_type 'center' instead of the default 'edge'
+					ax.bar_label(p1, label_type='center')
+					ax.bar_label(p2, label_type='center')
+					#ax.bar_label(p2)
+
+
+					plt.savefig('resources/plots/'+'receipt_upload.png',bbox_inches='tight')
+					
+
+
+					left= Inches(0.5)
+					top=Inches(2)
+					height = Inches(5.5) 
+					width = Inches(6)
+
+					receipt_upload_path ="resources/plots/receipt_upload.png"
+
+
+					#pic = slide.shapes.add_picture(top_mech_no , left,top,width =width,height = height)
+					pic = slide.shapes.add_picture(receipt_upload_path , left, top,width,height)
+
+
+					############# Adding Comments #################################333
+
+					# creating textBox
+					left= Inches(6.5)
+					top=Inches(3)
+					height = Inches(1) 
+					width = Inches(15)
+
+
+					txBox = slide.shapes.add_textbox(left, top,width =width, height = height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > A total of '+ str(num_receipts['no_of_receipts_upload'].sum()+num_promo_receipts['no_of_receipts_upload'].sum())+' receipts were uploaded on the '+str(selected_date)
+					p.level = 0
+					#p.font.bold = True
+					p.font.size = Pt(16)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = '> Out of the total receipts uploaded,'+str(num_valid_receipts["no_of_valid_receipts"].sum()+num_valid_promo_receipts["no_of_valid_receipts"].sum())+ ' were found to be valid and thus approved'
+					p.level = 0
+					#p.font.bold = True
+					p.font.size = Pt(16)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+					
+					
+
+					
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > From the valid receipts, '+str(num_valid_receipts["no_of_valid_receipts"].sum())+' did not have PPC130 promo code'
+					p.level = 0
+					#p.font.bold = True
+					p.font.size = Pt(16)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = '  > '+str( num_invalid_receipts["no_of_invalid_receipts"].sum()+num_invalid_promo_receipts["no_of_invalid_receipts"].sum())+ ' invalid receipts were uploaded, '+str(num_invalid_receipts["no_of_invalid_receipts"].sum())+' did not have PPC130 promo code.'
+
+					p.level = 0
+					#p.font.bold = True
+					p.font.size = Pt(16)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+
+
+
+
+					
+
+				###### Receipt Validation ##########
+
+
+				recpt_validation=st.empty()
+
+				with recpt_validation:
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
+
+					
+					left = Inches(0)
+					top=Inches(0)
+					height = Inches(1) 
+					
+					pic = slide.shapes.add_picture(top_left_path, left,top, height = height)
+
+					left= Inches(11)
+					top=Inches(0.248)
+					height = Inches(1.26) 
+					width = Inches(2.866)
+					pic = slide.shapes.add_picture(surerewads_path, left,top,width =width,height = height)
+
+					left= Inches(0.8)
+					top=Inches(7.677)
+					height = Inches(1.248) 
+					width = Inches(1.299)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
+
+
+
+
+
+					left= Inches(12.8386)
+					top=Inches(8)
+					height = Inches(1) 
+
+					pic = slide.shapes.add_picture(bottom_right_path, left,top, height = height)
+
+
+					left= Inches(3.2757)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+					
+
+
+					###################### Adding text   #######################################
+
+					# For adjusting the Margins in inches
+					left= Inches(4)
+					top=Inches(0.06)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = " PPC130 Receipt Validation"
+					p.font.bold = True
+					p.font.size = Pt(35)
+					p.font.color.rgb = RGBColor(255, 0, 0)
+					p.font.name = 'Arial'
+
+
+					##### placing the figure #######
+
+					fig, ax = plt.subplots()
+					plt.tight_layout()
+
+					sizes = list(status['count'])
+
+					# Setting labels for items in Chart
+					labels = list(status['status'])
+
+					# colors
+					
+
+					# explosion
+					
+
+					# Pie Chart
+					ax =plt.pie(sizes, labels=labels,autopct='%1.1f%%', pctdistance=0.85)
+
+					# draw circle
+					centre_circle = plt.Circle((0, 0), 0.70, fc='white')
+					fig = plt.gcf()
+
+					# Adding Circle in Pie chart
+					fig.gca().add_artist(centre_circle)
+
+
+					plt.savefig('resources/plots/'+'status_plot.png',bbox_inches='tight')
+					#st.pyplot(plt.show())
+
+
+					left= Inches(0.3)
+					top=Inches(2)
+					height = Inches(5) 
+					width = Inches(7)
+
+					status_img ="resources/plots/status_plot.png"
+
+
+					#pic = slide.shapes.add_picture(top_mech_no , left,top,width =width,height = height)
+					pic = slide.shapes.add_picture(status_img , left, top,width,height)
+
+
+
+					###### Adding Comments ##########################3
+
+					apprv_ = status[status['status']=='approved']['count'].reset_index()
+					limit_ = status[status['status']=='Limit reached.']['count'].reset_index()
+
+					apprvd_per =round(((apprv_['count'][0]+limit_['count'][0])/status['count'].sum())*100,2)
+
+
+
+					
+					# creating textBox
+					left= Inches(7.5)
+					top=Inches(3)
+					height = Inches(1) 
+					width = Inches(15)
+
+
+					txBox = slide.shapes.add_textbox(left, top,width =width, height = height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > '+ str(apprvd_per )+'% of the receipts uploaded were found to be valid and thus were approved,'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(14)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(10)
+					p.text = 'Limit reached included'
+					p.level = 1
+					p.font.bold = True
+					p.font.size = Pt(14)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+					
+					
+
+					
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > '+ str(100-apprvd_per)+'% of the receipts were not approved'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(14)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = '  > The main reasons for disapproval includes, Receipt not visible , Receipt not relevant'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(14)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(10)
+					p.text = ' Duplicate receipt and Outdated receipt.'
+					p.level = 1
+					p.font.bold = True
+					p.font.size = Pt(14)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+                ############ Last Slide  ###############
+				last_slide=st.empty()
+
+				with last_slide:
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
+
+	
+
+
+					left= Inches(5)
+					top=Inches(0.5)
+					height = Inches(6) 
+					width = Inches(6)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
+
+
+
+
+
+
+					left= Inches(3.2757)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+
+					###################### Adding text   #######################################
+
+					left= Inches(5.5)
+					top=Inches(6)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width =width, height = height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+
+
+					p = tf.add_paragraph()
+
+					p.text = 'THANK YOU'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(60)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+					 
 
 
 
@@ -912,13 +1643,35 @@ def main():
 
 
 
-				#ppt.save("pptx-to-pdf-selected-slides.pdf",slides.export.SaveFormat.PDF)
 
-				#file =ppt.save('test_4.pptx')
+                ##  Saving  to file
+				#ppt.save('Daily Report.pptx')
+
+				#f = open('Daily Report.pptx','r')
+
+
+				#########   Downloading the Presentation #######
+
+				from io import BytesIO
+
+
+				# save the output into binary form
+				binary_output = BytesIO()
+				ppt.save(binary_output) 
+
+				st.download_button(label = 'Download Daily Report',data = binary_output.getvalue(),file_name = str(selected_date)+' Daily Report.pptx')
+
+				#st.download_button( label="Download data as CSV",data=f,file_name='large_df.csv',mime='text/csv',)
 
 
 
-				#st.download_button('Download binary file', ppt)
+			
+
+				#f.close()
+
+
+
+				#
 
 
 
@@ -950,7 +1703,7 @@ def main():
 
 
 				# save file
-				ppt.save('test_4.pptx')
+				
 
 
 
@@ -1526,27 +2279,30 @@ def main():
 		# Loaading Datasets
 		num_bags =pd.read_sql_query("select cast(r.updatedAt as date) as date,sum(ppc_surebuild + ppc_surecast + ppc_surecem + ppc_suretech + ppc_surewall) as number_of_bags from receipts as r inner join receiptdata as rdata on r.id =rdata.receipt_id where r.status in ('approved','Limit reached.') and cast(r.updatedAt as date)  between '2022-02-15' and current_date() group by date" ,conn)
 		
-		num_reg =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users where cast(createdAt as date) >= '2022-02-15'  group by date order by date",conn)
+		num_reg =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users where cast(createdAt as date) >= '2022-02-15' group by date ",conn)
 
 		num_reg_ =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users where cast(createdAt as date) >= '2022-02-15'  ",conn)
 		num_reg_total =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users ",conn)
 
 		num_promo_reg = pd.read_sql_query("Select cast(createdAt as date) as date,count(*) as No_Promocode from users where code = 'PPC130'   ",conn)
 
-		num_receipts_total=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.')   group by date",conn)
-		num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) >='2022-02-15' group by date ",conn)
+		num_receipts_total=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status != 'unprocessed'  ",conn)
+		num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status != 'unprocessed' and cast(receipts.updatedAt as date) >='2022-02-15' group by date ",conn)
 		
-		num_valid_receipts_total =pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed')  group by date",conn)
+		num_valid_receipts_total =pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') ",conn)
 		num_valid_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  ",conn)
 
 		#num_invalid_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
 
-		num_user_r_upload_total=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.')  group by date",conn)
-		num_user_r_upload=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
+		num_user_r_upload_total=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.')  ",conn)
+		num_user_r_upload=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) >= '2022-02-15' ",conn)
 
-		num_user_valid_receipts_total=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_users_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed')  group by date",conn)
-		num_user_valid_receipts=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_users_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
-		#num_user_invalid_receipts=pd.read_sql_query("SELECT count(distinct(users.id))as no_of_users_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
+		num_user_valid_receipts_total=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_users_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed')  ",conn)
+		num_user_valid_receipts=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_users_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  ",conn)
+		
+
+		
+		status=pd.read_sql_query("select status, count(*) as count from users as u join receipts as r on u.id = r.user_id where cast(r.createdAt as date) >='2022-04-15' and status != 'unprocessed' group by status",conn)
 		
 	
 
@@ -1635,6 +2391,48 @@ def main():
 				metric("No of Valid Receipts From PPC130 Campaign",num_valid_receipts["no_of_valid_receipts"].sum())
 
 
+		num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code !='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) >='2022-02-15'  ",conn)
+		num_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code ='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) >='2022-02-15' ",conn)
+
+		num_valid_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code != 'PPC130' and status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  ",conn)
+		num_valid_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code  ='PPC130' and status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  ",conn)
+
+		num_invalid_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code  ='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) >= '2022-02-15'  ",conn)
+		num_invalid_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code !='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) >= '2022-02-15'  ",conn)
+		
+		
+		N = 3
+		No_Promo = (num_receipts['no_of_receipts_upload'].sum(), num_valid_receipts["no_of_valid_receipts"].sum(), num_invalid_receipts["no_of_invalid_receipts"].sum()  )
+		Promo = (num_promo_receipts['no_of_receipts_upload'].sum(), num_valid_promo_receipts["no_of_valid_receipts"].sum(),num_invalid_promo_receipts["no_of_invalid_receipts"].sum())
+		menStd = (2, 3, 4, 1, 2)
+		womenStd = (3, 5, 2, 3, 3)
+		ind = np.arange(N)    # the x locations for the groups
+		width = 0.35       # the width of the bars: can also be len(x) sequence
+
+
+
+		fig, ax = plt.subplots()
+		plt.tight_layout()
+
+		p1 = ax.bar(ind, Promo, width,  label='With PPC130')
+		p2 = ax.bar(ind, No_Promo, width,bottom=Promo, label='Without PPC130')
+
+		ax.axhline(0, color='grey', linewidth=0.8)
+		ax.set_ylabel('Number Of Receipts ')
+		ax.set_title('PPC130 Receipt Upload')
+		ax.spines['right'].set_visible(False)
+		ax.spines['top'].set_visible(False)
+		ax.set_xticks(ind,labels=['Total', 'Valid', 'Invalid'])
+		ax.legend()
+
+		# Label with label_type 'center' instead of the default 'edge'
+		ax.bar_label(p1, label_type='center')
+		ax.bar_label(p2, label_type='center')
+		#ax.bar_label(p2)
+
+		st.pyplot(fig)
+
+
 
 	
 		st.markdown("<h3 style='text-align: center; color: red;'>Customer Engagement</h3>", unsafe_allow_html=True)
@@ -1654,18 +2452,56 @@ def main():
 			with col4:
 				metric("PPC130 Campaign Customers With Valid Recipets ",num_user_valid_receipts["no_of_users_valid_receipts"].sum())
 
+
 		
-		st.markdown("<h3 style='text-align: center; color: red;'>Customer Conversion By Valid Receipt Upload</h3>", unsafe_allow_html=True)
+		
+		
+		
+		
+		st.markdown("<h3 style='text-align: center; color: red;'>Customer Conversion By Receipt Upload</h3>", unsafe_allow_html=True)
 
 		container = st.container()
 		col1, col2= st.columns(2)
 
 		with container:
 			with col1:
-				metric("Overall Conversion rate",   "{0:.0%}".format(num_user_valid_receipts_total["no_of_users_valid_receipts"].sum()/num_reg_total['num_of_reg'].sum()) )
+				metric("Overall Conversion rate",   "{0:.0%}".format(num_user_r_upload_total['no_of_receipts_upload'].sum()/num_reg_total['num_of_reg'].sum()) )
 
 			with col2:
-				metric("PPC130 Campaign Conversion rate" , "{0:.0%}".format(num_user_valid_receipts["no_of_users_valid_receipts"].sum()/num_reg['num_of_reg'].sum()))
+				metric("PPC130 Campaign Conversion rate" , "{0:.0%}".format(num_user_r_upload['no_of_receipts_upload'].sum()/num_reg['num_of_reg'].sum()))
+
+
+
+		#chart = alt.Chart(status).mark_arc(innerRadius=50).encode(theta=alt.Theta(field="count", type="quantitative"), color=alt.Color(field="status", type="nominal"),)
+		#st.altair_chart(chart, use_container_width=True)
+
+		# Setting size in Chart based on
+		# given values
+
+		st.markdown("<h3 style='text-align: center; color: red;'>PPC130 Receipt Validation</h3>", unsafe_allow_html=True)
+
+				
+		fig, ax = plt.subplots()
+		plt.tight_layout()
+
+		sizes = list(status['count'])
+
+		# Setting labels for items in Chart
+		labels = list(status['status'])
+
+
+		# Pie Chart
+		ax =plt.pie(sizes, labels=labels,autopct='%1.1f%%', pctdistance=0.85)
+
+		# draw circle
+		centre_circle = plt.Circle((0, 0), 0.70, fc='white')
+		fig = plt.gcf()
+
+		# Adding Circle in Pie chart
+		fig.gca().add_artist(centre_circle)
+
+		st.pyplot(fig)
+
 
 
 		
