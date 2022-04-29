@@ -2880,6 +2880,8 @@ def main():
 
 		if st.checkbox('Show Overall Weekday Performance Statistics'):
 			region_df = model_df[["weekday", 'Total number of bags']].groupby("weekday").describe()
+
+			region_df  = region_df .astype(int)
 			st.dataframe(region_df)
 
 			csv = region_df.to_csv(index=True, sep=',')
@@ -2892,6 +2894,8 @@ def main():
 			inland_df =model_df[model_df['region']=='inland']
 
 			df_inland =inland_df[["weekday", 'Total number of bags']].groupby("weekday").describe()
+
+			df_inland = df_inland .astype(int)
 			st.dataframe(df_inland)
 
 			csv = df_inland.to_csv(index=True, sep=',')
@@ -2905,9 +2909,11 @@ def main():
 
 			df_coastal =coastal_df[["weekday", 'Total number of bags']].groupby("weekday").describe()
 
+			df_coastal =df_coastal .astype(int)
+
 			st.dataframe(df_coastal)
 
-			csv = df_inland.to_csv(index=True, sep=',')
+			csv = df_coastal.to_csv(index=True, sep=',')
 			st.download_button(label="Download data as CSV",data=csv,file_name='Coastal Performance statistics.csv',mime='text/csv', )
 
 
