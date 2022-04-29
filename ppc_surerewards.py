@@ -190,6 +190,9 @@ def main():
 						
 		return df
 
+	def convert_df(df):
+		return df.to_csv().encode('utf-8')
+
 
 
 
@@ -199,7 +202,7 @@ def main():
 	# Creating sidebar with selection box -
 	# you can create multiple pages this way
 	
-	options = ["Surerewards Customers","Prediction Page","Product Performance","Customer Location","Auto Reports"]
+	options = ["Surerewards Customers","Performance Target Page","Product Performance","Customer Location","Auto Reports"]
 	#
 
 	selection = st.sidebar.radio("Select Page:",options)
@@ -220,6 +223,23 @@ def main():
 
 
 
+			### Raising Warning for trying to generate todays report ########
+			
+			
+			from datetime import date
+			today = date.today()
+
+			#if selected_date ==today :
+				#raise Exception("Sorry, you cannot generate todays report as receipts are being processed")
+				#st.error("No frames fit the criteria. Please select different label or number.")
+
+			#if selected_frame_index == None:
+        	#	st.error("No frames fit the criteria. Please select different label or number.")
+        	#	return
+
+
+
+
 			num_reg =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users where cast(createdAt as date) between '2022-02-15' and '"+ str(selected_date)+"' group by date order by date",conn)
 					
 			num_reg['date'] =  pd.to_datetime(num_reg['date'])
@@ -233,6 +253,24 @@ def main():
 
 			df_receiptdata=pd.read_sql_query("SELECT mechant,location,action as platform_massage,cast(createdAt as date) as receipt_upload_date,cast(updatedAt as date) as receipt_captured_date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(updatedAt as date) = '"+ str(selected_date)+"'" ,conn)
 
+			camp_u_recpt = pd.read_sql_query( "SELECT count(users.id) as value from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','approved','Limit Reached.') and cast(receipts.createdAt as date) ='"+str(selected_date)+"'and cast(users.createdAt as date ) between '2022-02-15' and '"+str(selected_date)+"-1'",conn)
+			camp_u_numb = pd.read_sql_query( "SELECT count(distinct(users.id)) as value from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','approved','Limit Reached.') and cast(receipts.createdAt as date) ='"+str(selected_date)+"'and cast(users.createdAt as date ) between '2022-02-15' and '"+str(selected_date)+"-1'",conn)
+
+			new_u_recpt = pd.read_sql_query( "SELECT count(users.id) as value from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','approved','Limit Reached.') and cast(receipts.createdAt as date) ='"+str(selected_date)+"'and cast(users.createdAt as date ) = '"+str(selected_date)+"'",conn)
+			new_u_numb = pd.read_sql_query( "SELECT count(distinct(users.id)) as value from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','approved','Limit Reached.') and cast(receipts.createdAt as date) ='"+str(selected_date)+"'and cast(users.createdAt as date ) ='"+str(selected_date)+"'",conn)
+
+
+			ex_u_recpt = pd.read_sql_query( "SELECT count(users.id) as value from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','approved','Limit Reached.') and cast(receipts.createdAt as date) ='"+str(selected_date)+"'and cast(users.createdAt as date ) < '2022-02-15'",conn)
+			ex_u_numb = pd.read_sql_query( "SELECT count(distinct(users.id)) as value  from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','approved','Limit Reached.') and cast(receipts.createdAt as date) ='"+str(selected_date)+"'and cast(users.createdAt as date ) < '2022-02-15'",conn)
+
+
+
+
+
+
+
+
+
 
 			bags_by_date=pd.read_sql_query("SELECT cast(updatedAt as date) as date ,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(updatedAt as date) between '2022-02-15' and '"+ str(selected_date)+"'" ,conn)
 			bags_by_date['Total number of bags'] =bags_by_date['ppc_surebuild']+bags_by_date['ppc_surecem'] +bags_by_date['ppc_surecast']+bags_by_date['ppc_suretech']+bags_by_date['ppc_surewall']+bags_by_date['ppc_sureroad']+bags_by_date['ppc_plaster']+bags_by_date['ppc_motor']
@@ -240,6 +278,17 @@ def main():
 			## Taking posative Values
 			bags_by_date = bags_by_date[bags_by_date['Total number of bags']>0]
 			bags_by_date['ppc_motor'] = bags_by_date['ppc_motor'].abs()
+
+
+			num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.createdAt as date) as date from users inner join receipts on users.id=receipts.user_id where code !='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.createdAt as date) = '"+str(selected_date)+"' ",conn)
+			num_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.createdAt as date) as date from users inner join receipts on users.id=receipts.user_id where code ='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.createdAt as date) ='"+str(selected_date)+"' ",conn)
+
+			num_valid_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.createdAt as date) as date from users inner join receipts on users.id=receipts.user_id where code != 'PPC130' and status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.createdAt as date) ='"+str(selected_date)+"' ",conn)
+			num_valid_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.createdAt as date) as date from users inner join receipts on users.id=receipts.user_id where code  ='PPC130' and status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.createdAt as date) = '"+str(selected_date)+"' ",conn)
+
+			num_invalid_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.createdAt as date) as date from users inner join receipts on users.id=receipts.user_id where code  ='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.createdAt as date) = '"+str(selected_date)+"' ",conn)
+			num_invalid_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.createdAt as date) as date from users inner join receipts on users.id=receipts.user_id where code !='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.createdAt as date) = '"+str(selected_date)+"' ",conn)
+					
 
 
 			bags_by_date =bags_by_date.groupby(['date'])[['Total number of bags']].apply(lambda x : x.astype(int).sum())
@@ -307,6 +356,19 @@ def main():
 			for i,row in df_receiptdata.iterrows():
 				if df_receiptdata.at[i,'province'] not in province_name :
 					df_receiptdata.at[i,'province'] =prov_mode
+			
+
+			coastal_prov = ['western cape','eastern cape','kwazulu natal','northern cape'] 
+
+			df_receiptdata['region']=''
+
+			for i,row in df_receiptdata.iterrows():
+				if df_receiptdata.at[i,'province'] in coastal_prov:
+					df_receiptdata.at[i,'region'] ='coastal'
+				else :
+					df_receiptdata.at[i,'region'] ='inland'
+
+
 
 
 
@@ -602,7 +664,25 @@ def main():
 
 					p = tf.add_paragraph()
 					p.line_spacing = Pt(40)
-					p.text = ' > Products Sales Performance'
+					p.text = ' > Products Sales By Province'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Product Sales By Store Location'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(24)
+					p.font.color.rgb = RGBColor(0, 0, 0)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Product Sales By Region'
 					p.level = 0
 					p.font.bold = True
 					p.font.size = Pt(24)
@@ -621,25 +701,6 @@ def main():
 					
 
 					
-					p = tf.add_paragraph()
-					p.line_spacing = Pt(40)
-					p.text = ' > Product Sales By Location'
-					p.level = 0
-					p.font.bold = True
-					p.font.size = Pt(24)
-					p.font.color.rgb = RGBColor(0, 0, 0)
-					p.font.name = 'Arial'
-
-
-
-					p = tf.add_paragraph()
-					p.line_spacing = Pt(40)
-					p.text = ' > Product Sales By Region'
-					p.level = 0
-					p.font.bold = True
-					p.font.size = Pt(24)
-					p.font.color.rgb = RGBColor(0, 0, 0)
-					p.font.name = 'Arial'
 
 					p = tf.add_paragraph()
 					p.line_spacing = Pt(40)
@@ -827,6 +888,8 @@ def main():
 				bags_by_=st.empty()
 
 				with bags_by_ :
+					
+					
 					# Attaching slide to ppt
 					slide = ppt.slides.add_slide(blank_slide_layout) 
 					
@@ -976,14 +1039,428 @@ def main():
 					p.font.color.rgb = RGBColor(112, 48, 160)
 					p.font.name = 'Arial'
 
+             	
 
 
+				
+				############ Product Split By Location ###############
+
+				product_prov=st.empty()
+				
+				with product_prov :
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
+
+					
+					left = Inches(0)
+					top=Inches(0)
+					height = Inches(1) 
+					
+					pic = slide.shapes.add_picture(top_left_path, left,top, height = height)
+
+					left= Inches(11)
+					top=Inches(0.248)
+					height = Inches(1.26) 
+					width = Inches(2.866)
+					pic = slide.shapes.add_picture(surerewads_path, left,top,width =width,height = height)
+
+					left= Inches(0.8)
+					top=Inches(7.677)
+					height = Inches(1.248) 
+					width = Inches(1.299)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
+
+
+
+
+
+					left= Inches(12.8386)
+					top=Inches(8)
+					height = Inches(1) 
+
+					pic = slide.shapes.add_picture(bottom_right_path, left,top, height = height)
+
+
+					left= Inches(3.2757)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+					
+
+
+					###################### Adding text   #######################################
+
+					# For adjusting the Margins in inches
+					left= Inches(2.5)
+					top=Inches(0.06)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = " Product Performance By Province"
+					p.font.bold = True
+					p.font.size = Pt(32)
+					p.font.color.rgb = RGBColor(255, 0, 0)
+					p.font.name = 'Arial'
+
+
+
+
+					################# Addding  Plot  ################################
+
+					producd_region = df_receiptdata.groupby(['province'])['ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor'].sum().reset_index()
+
+					product = pd.DataFrame({"ppc_surebuild":list(producd_region['ppc_surebuild']),'ppc_surecem':list(producd_region['ppc_surecem']),'ppc_surecast':list(producd_region['ppc_surecast']),'ppc_suretech':list(producd_region['ppc_suretech']),'ppc_surewall':list(producd_region['ppc_surewall']),'ppc_sureroad':list(producd_region['ppc_sureroad']),'ppc_plaster':list(producd_region['ppc_plaster']),'ppc_motor':list(producd_region['ppc_motor'])}, index=producd_region['province'])
+
+
+
+					
+					fig, ax = plt.subplots(figsize=(20, 10))
+
+					# Plotting the pie chart for above dataframe
+
+					ax =product.plot(kind="bar")
+					plt.tight_layout()	
+
+					plt.savefig('resources/plots/product_loc'+'.png',bbox_inches='tight')
+					
+					left= Inches(1)
+					top=Inches(2)
+					height = Inches(8) 
+					width = Inches(6)
+
+					product_img ="resources/plots/product_loc.png"
+
+
+					#pic = slide.shapes.add_picture(top_mech_no , left,top,width =width,height = height)
+					pic = slide.shapes.add_picture(product_img  , left, top,width,height)
+
+
+										# creating textBox
+					left= Inches(3)
+					top=Inches(6)
+					height = Inches(1) 
+					width = Inches(15)
+
+
+					txBox = slide.shapes.add_textbox(left, top,width =width, height = height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Inland contributed   '+ str(10000)+' bags , translating to '+str((1000*50)/1000) +' tons of cement.'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(20)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.text = '> Coastal ranked in '+str(1000)+' bags of PPC cement translating to '+str((1000*50)/1000)+' tons of cement.'
+					p.level = 1
+					p.font.bold = True
+					p.font.size = Pt(20)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+
+
+
+					############# Performance By store location ########################
+
+				product_location=st.empty()
+				
+				with product_location :
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
+
+					
+					left = Inches(0)
+					top=Inches(0)
+					height = Inches(1) 
+					
+					pic = slide.shapes.add_picture(top_left_path, left,top, height = height)
+
+					left= Inches(11)
+					top=Inches(0.248)
+					height = Inches(1.26) 
+					width = Inches(2.866)
+					pic = slide.shapes.add_picture(surerewads_path, left,top,width =width,height = height)
+
+					left= Inches(0.8)
+					top=Inches(7.677)
+					height = Inches(1.248) 
+					width = Inches(1.299)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
+
+
+
+
+
+					left= Inches(12.8386)
+					top=Inches(8)
+					height = Inches(1) 
+
+					pic = slide.shapes.add_picture(bottom_right_path, left,top, height = height)
+
+
+					left= Inches(3.2757)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+					
+
+
+					###################### Adding text   #######################################
+
+					# For adjusting the Margins in inches
+					left= Inches(2.5)
+					top=Inches(0.06)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = " Product Sale By Store Location"
+					p.font.bold = True
+					p.font.size = Pt(32)
+					p.font.color.rgb = RGBColor(255, 0, 0)
+					p.font.name = 'Arial'
+
+
+
+
+
+					####################################################################
+
+
+
+
+			 
+			 
+			 
+			 
+			 	#############  Region Contribution ###################
+
+			 
+				region_=st.empty()
+
+				with region_ :
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
+
+					
+					left = Inches(0)
+					top=Inches(0)
+					height = Inches(1) 
+					
+					pic = slide.shapes.add_picture(top_left_path, left,top, height = height)
+
+					left= Inches(11)
+					top=Inches(0.248)
+					height = Inches(1.26) 
+					width = Inches(2.866)
+					pic = slide.shapes.add_picture(surerewads_path, left,top,width =width,height = height)
+
+					left= Inches(0.8)
+					top=Inches(7.677)
+					height = Inches(1.248) 
+					width = Inches(1.299)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
+
+
+
+
+
+					left= Inches(12.8386)
+					top=Inches(8)
+					height = Inches(1) 
+
+					pic = slide.shapes.add_picture(bottom_right_path, left,top, height = height)
+
+
+					left= Inches(3.2757)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+					
+
+
+					###################### Adding text   #######################################
+
+					# For adjusting the Margins in inches
+					left= Inches(2.5)
+					top=Inches(0.06)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = " Product Performance By Region "
+					p.font.bold = True
+					p.font.size = Pt(32)
+					p.font.color.rgb = RGBColor(255, 0, 0)
+					p.font.name = 'Arial'
+
+
+
+
+					################# Addding  Plot  ################################
+
+
+					
+					fig, ax = plt.subplots(figsize=(10, 6))
+
+					# Plotting the pie chart for above dataframe
+					ax = df_receiptdata.groupby(['region']).sum().plot(kind='pie', y='Total number of bags', autopct='%1.0f%%')
+
+
+					plt.savefig('resources/plots/region_perc'+'.png',bbox_inches='tight')
+					
+					left= Inches(1)
+					top=Inches(2)
+					height = Inches(4) 
+					width = Inches(4)
+
+					region_perc_img ="resources/plots/region_perc.png"
+
+
+					#pic = slide.shapes.add_picture(top_mech_no , left,top,width =width,height = height)
+					pic = slide.shapes.add_picture(region_perc_img  , left, top,width,height)
+
+
+
+					#######################    Adding Second  Plot ##########################
+
+
+					fig, ax = plt.subplots(figsize=(10, 6))
+
+
+
+					
+					# Plotting the pie chart for above dataframe
+					ax = df_receiptdata.groupby(['region']).sum().plot(kind='bar', y='Total number of bags')
+
+
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+
+
+
+					plt.savefig('resources/plots/region_sum'+'.png',bbox_inches='tight')
+					
+					left= Inches(8)
+					top=Inches(2)
+					height = Inches(4) 
+					width = Inches(4)
+
+					region_sum_img ="resources/plots/region_sum.png"
+
+
+					#pic = slide.shapes.add_picture(top_mech_no , left,top,width =width,height = height)
+					pic = slide.shapes.add_picture(region_sum_img  , left, top,width,height)
+
+
+					#######################################################################
+
+
+
+					sum_region =df_receiptdata.groupby(['region'])['Total number of bags'].sum().reset_index()
+
+					coastal_bags = sum_region.loc[sum_region['region'] =='coastal']['Total number of bags'].item()
+
+					inland_bags = sum_region.loc[sum_region['region'] =='inland']['Total number of bags'].item()
+
+
+
+
+					# creating textBox
+					left= Inches(3)
+					top=Inches(6)
+					height = Inches(1) 
+					width = Inches(15)
+
+
+					txBox = slide.shapes.add_textbox(left, top,width =width, height = height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+
+					p = tf.add_paragraph()
+					p.line_spacing = Pt(40)
+					p.text = ' > Inland contributed   '+ str(inland_bags)+' bags , translating to '+str((inland_bags*50)/1000) +' tons of cement.'
+					p.level = 0
+					p.font.bold = True
+					p.font.size = Pt(20)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+					p = tf.add_paragraph()
+					p.text = '> Coastal ranked in '+str(coastal_bags )+' bags of PPC cement translating to '+str((coastal_bags*50)/1000)+' tons of cement.'
+					p.level = 1
+					p.font.bold = True
+					p.font.size = Pt(20)
+					p.font.color.rgb = RGBColor(112, 48, 160)
+					p.font.name = 'Arial'
+
+					
+			 ######################################################
 
 
 
 					#pic = slide.shapes.add_picture(chart, left,top)
 
-                ################### Top Performing Merchant
+                ################### Top Performing Merchant ############
 
 				Merchant_pef=st.empty()
 
@@ -1267,15 +1744,7 @@ def main():
 
 					############ Adding Plot #################
 
-					num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code !='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) = '"+str(selected_date)+"' ",conn)
-					num_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code ='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) ='"+str(selected_date)+"' ",conn)
 
-					num_valid_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code != 'PPC130' and status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) ='"+str(selected_date)+"' ",conn)
-					num_valid_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code  ='PPC130' and status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) = '"+str(selected_date)+"' ",conn)
-
-					num_invalid_promo_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code  ='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) = '"+str(selected_date)+"' ",conn)
-					num_invalid_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code !='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) = '"+str(selected_date)+"' ",conn)
-					
 		
 					N = 3
 					No_Promo = (num_receipts['no_of_receipts_upload'].sum(), num_valid_receipts["no_of_valid_receipts"].sum(), num_invalid_receipts["no_of_invalid_receipts"].sum()  )
@@ -1379,9 +1848,173 @@ def main():
 
 
 
+				################### Customer Engagement #################
 
+				customer_eng=st.empty()
+
+				with customer_eng:
+					# Attaching slide to ppt
+					slide = ppt.slides.add_slide(blank_slide_layout) 
+					
+					# adding images
 
 					
+					left = Inches(0)
+					top=Inches(0)
+					height = Inches(1) 
+					
+					pic = slide.shapes.add_picture(top_left_path, left,top, height = height)
+
+					left= Inches(11)
+					top=Inches(0.248)
+					height = Inches(1.26) 
+					width = Inches(2.866)
+					pic = slide.shapes.add_picture(surerewads_path, left,top,width =width,height = height)
+
+					left= Inches(0.8)
+					top=Inches(7.677)
+					height = Inches(1.248) 
+					width = Inches(1.299)
+					pic = slide.shapes.add_picture(analytics_path, left,top,width =width,height = height)
+
+
+
+
+
+					left= Inches(12.8386)
+					top=Inches(8)
+					height = Inches(1) 
+
+					pic = slide.shapes.add_picture(bottom_right_path, left,top, height = height)
+
+
+					left= Inches(3.2757)
+					top=Inches(8.4724)
+					height = Inches(0.4173) 
+					width = Inches(8.5079)
+
+
+					pic = slide.shapes.add_picture(small_logo_right_path, left,top,width =width,height = height)
+
+					###################### Adding text   #######################################
+
+					# For adjusting the Margins in inches
+					left= Inches(3)
+					top=Inches(0.06)
+					height = Inches(0.941) 
+					width = Inches(5.181)
+					# creating textBox
+					txBox = slide.shapes.add_textbox(left, top,width, height)
+
+					# creating textFrames
+					tf = txBox.text_frame
+
+					# adding Paragraphs
+					p = tf.add_paragraph()
+
+					# adding text
+					#p.text = "This is a second paragraph that's bold and italic"
+
+					p = tf.add_paragraph()
+					p.text = " PPC130 Customer Engagement"
+					p.font.bold = True
+					p.font.size = Pt(35)
+					p.font.color.rgb = RGBColor(255, 0, 0)
+					p.font.name = 'Arial'
+
+					############ Adding Plot #################	
+
+					
+					fig, ax = plt.subplots()
+					plt.tight_layout()
+
+					users_ = ["New Users","Users From Campaign","Existing Users"]
+				
+					no_receipts = [new_u_recpt['value'].item(),camp_u_recpt['value'].item(), ex_u_recpt['value'].item()]
+
+
+					# Plot horizontal bar chart
+
+					bars = plt.barh(users_ ,no_receipts)
+
+					# To get data labels
+
+					for  bar in bars:
+						width = bar.get_width()
+						label_y = bar.get_y() + bar.get_height() / 2
+						plt.text(width, label_y, s=f'{width}')
+
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+						
+					# Define axes labels
+
+					plt.xlabel("No Of Receipts ")
+
+
+					plt.savefig('resources/plots/'+'user_recpt.png',bbox_inches='tight')
+					
+
+					receipt_user_path ="resources/plots/user_recpt.png"
+
+					left= Inches(0.5)
+					top=Inches(2)
+					height = Inches(3) 
+					width = Inches(6)
+					#pic = slide.shapes.add_picture(top_mech_no , left,top,width =width,height = height)
+					pic = slide.shapes.add_picture(receipt_user_path  , left, top,width,height)
+
+
+					#### Second Visual #############
+
+					fig, ax = plt.subplots()
+					plt.tight_layout()
+
+					users_ = ["New Users","Users From Campaign","Existing Users"]
+
+					no_user = [new_u_numb['value'].item(),camp_u_numb['value'].item(), ex_u_numb['value'].item()]
+
+
+					# Plot horizontal bar chart
+
+					bars = plt.barh(users_ ,no_user)
+
+					# To get data labels
+
+					for  bar in bars:
+						width = bar.get_width()
+						label_y = bar.get_y() + bar.get_height() / 2
+						plt.text(width, label_y, s=f'{width}')
+
+					ax.spines['right'].set_visible(False)
+					ax.spines['top'].set_visible(False)
+						
+					# Define axes labels
+
+					plt.xlabel("No Of Users ")
+
+
+					plt.savefig('resources/plots/'+'user_no.png',bbox_inches='tight')
+					
+
+					no_user_path ="resources/plots/user_no.png"
+
+					left= Inches(5)
+					top=Inches(2)
+					height = Inches(3) 
+					width = Inches(6)
+
+
+
+
+
+					#pic = slide.shapes.add_picture(top_mech_no , left,top,width =width,height = height)
+					pic = slide.shapes.add_picture(no_user_path  , left, top,width,height)
+
+
+
+
+
 
 				###### Receipt Validation ##########
 
@@ -1551,7 +2184,7 @@ def main():
 					
 					p = tf.add_paragraph()
 					p.line_spacing = Pt(40)
-					p.text = ' > '+ str(100-apprvd_per)+'% of the receipts were not approved'
+					p.text = ' > '+ str(round(100-apprvd_per,2))+'% of the receipts were not approved'
 					p.level = 0
 					p.font.bold = True
 					p.font.size = Pt(14)
@@ -1761,7 +2394,7 @@ def main():
 		df_receiptdata['ppc_motor'] = df_receiptdata['ppc_motor'].abs()
 
         ## Receipt data from  PPC130 Campaign
-		PPC130_receiptdata = df_receiptdata [df_receiptdata['receipt_upload_date']>=pd.to_datetime("'2022-02-15'").date()]
+		PPC130_receiptdata = df_receiptdata [df_receiptdata['receipt_captured_date']>=pd.to_datetime("'2022-02-15'").date()]
 
 
 		### Visulaising The number by bags during campaign
@@ -2091,16 +2724,16 @@ def main():
 
 
 	# Building out the "Information" page
-	if selection == "Prediction Page":
+	if selection == "Performance Target Page":
 
 		
 		
-		st.markdown("<h3 style='text-align: center; color: black;'>This Page focuses on predicting number of bag and setting dynamic daily targets</h3>", unsafe_allow_html=True)
+		st.markdown("<h3 style='text-align: center; color: black;'>This Page focuses on  setting dynamic daily targets </h3>", unsafe_allow_html=True)
 
 
 
 
-		num_bags =pd.read_sql_query("select cast(r.updatedAt as date) as date,sum(ppc_surebuild + ppc_surecast + ppc_surecem + ppc_suretech + ppc_surewall) as number_of_bags from receipts as r inner join receiptdata as rdata on r.id =rdata.receipt_id where r.status in ('approved','Limit reached.') and cast(r.updatedAt as date)  between '2022-02-15' and current_date() group by date" ,conn)
+		num_bags =pd.read_sql_query("select cast(r.createdAt as date) as date,sum(ppc_surebuild + ppc_surecast + ppc_surecem + ppc_suretech + ppc_surewall) as number_of_bags from receipts as r inner join receiptdata as rdata on r.id =rdata.receipt_id where r.status in ('approved','Limit reached.') and cast(r.updatedAt as date)  >= '2022-02-15'  group by date" ,conn)
 		
 		content = {'date': list(pd.to_datetime(num_bags['date'], errors='coerce')),'number_of_bags': list(num_bags['number_of_bags'])}
 		df2 = pd.DataFrame(content).set_index('date')
@@ -2125,127 +2758,174 @@ def main():
 			#results.plot();
 			st.pyplot(fig)
 		st.markdown("<h5 style='text-align: center; color: black;'>How the model works</h5>", unsafe_allow_html=True)
-		if st.checkbox('Show How the works'):
+
+
+		#############  Load data ################
+
+
+		df_receiptdata=pd.read_sql_query("SELECT location,cast(createdAt as date) as date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(createdAt as date) >= '2022-02-15'" ,conn)
+ 
+		df_receiptdata[['city','province']] = df_receiptdata['location'].str.split(',', expand=True)
+		df_receiptdata.drop('location', axis=1, inplace=True)
+
+
+		#Removing white spaces
+		df_receiptdata['city'] = df_receiptdata['city'].str.strip() 
+		df_receiptdata['province'] = df_receiptdata['province'].str.strip()
+
+
+		#lowering all letters
+		df_receiptdata['city'] =df_receiptdata['city'].str.lower()
+		df_receiptdata['province'] = df_receiptdata['province'].str.lower()
+
+
+		#Removing all punctuations
+
+		df_receiptdata['city'] =df_receiptdata['city'].str.replace(r'[^\w\s]+', '', regex=True)
+		df_receiptdata['province'] = df_receiptdata['province'].str.replace(r'[^\w\s]+', '', regex=True)
+
 		
-			st.info("The model trained is LSTM ( Long Short Term Memory) model,which falls under Recurrent Neural Network models. This model is a Time Series Model that uses historical data for forecasting/ predicting the number of bags in the upcoming 7 days")			
+		#Removing all numbers from strings
+
+		df_receiptdata['city'] =df_receiptdata['city'].str.replace('\d+', '', regex=True)
+		df_receiptdata['province'] = df_receiptdata['province'].str.replace('\d+', '', regex=True)
+
+
+		df_receiptdata['Total number of bags'] =df_receiptdata['ppc_surebuild']+df_receiptdata['ppc_surecem'] +df_receiptdata['ppc_surecast']+df_receiptdata['ppc_suretech']+df_receiptdata['ppc_surewall']+df_receiptdata['ppc_sureroad']+df_receiptdata['ppc_plaster']+df_receiptdata['ppc_motor']
+
+		## Taking posative Values
+		df_receiptdata = df_receiptdata[df_receiptdata['Total number of bags']>0]
+
+		df_receiptdata['ppc_motor'] = df_receiptdata['ppc_motor'].abs()
+
+
+		#
+		## Replacing wrong captured name with correct ones
+		province_name =['limpopo','gauteng','mpumalanga','north west','free state','western cape','eastern cape','kwazulu natal','northern cape']
+
+
+		##### Replacing province name with true province name ################3
+
+		df_receiptdata=replace_similar_words(df_receiptdata,'province',province_name,80)
+
+
+		##### Replacing incorrect province with mode
+
+
+		prov_mode =df_receiptdata['province'].mode()[0]
+
+		for i,row in df_receiptdata.iterrows():
+			if df_receiptdata.at[i,'province'] not in province_name :
+				df_receiptdata.at[i,'province'] =prov_mode
 		
-		if st.button("Train Model"):
 
-			train = df2.iloc[:len(df2)]
-			test = df2.iloc[len(df2)-7:]
+		coastal_prov = ['western cape','eastern cape','kwazulu natal','northern cape'] 
 
+		df_receiptdata['region']=''
 
-			## Scaling the Data
-			from sklearn.preprocessing import MinMaxScaler
-			scaler = MinMaxScaler()
-
-			scaler.fit(train)
-			scaled_train = scaler.transform(train)
-			scaled_test = scaler.transform(test)
-
-			#Pre processing
-			from keras.preprocessing.sequence import TimeseriesGenerator
-
-			# spliting into 7 days splits
-			n_input = 7
-			n_features = 1
-			generator = TimeseriesGenerator(scaled_train, scaled_train, length=n_input, batch_size=1)
-
-
-			from keras.models import Sequential
-			from keras.layers import Dense
-			from keras.layers import LSTM
-
-			# define model
-			model = Sequential()
-			model.add(LSTM(100, activation='relu', input_shape=(n_input, n_features)))
-			model.add(Dense(1))
-			model.compile(optimizer='adam', loss='mse')
-
-
-			# fit model
-			model.fit(generator,epochs=50)
-
-			st.markdown("<h5 style='text-align: center; color: black;'>Model Convergence</h5>", unsafe_allow_html=True)
-			fig, ax = plt.subplots(figsize=(10,5))
-			plt.tight_layout()
-			loss_per_epoch = model.history.history['loss']
-			ax=plt.plot(range(len(loss_per_epoch)),loss_per_epoch)
-			plt.xlabel('Number of iterations')
-			plt.ylabel('means squeared error')
-			st.pyplot(fig)
-
-
-			#making predictions
-			test_predictions = []
-
-			first_eval_batch = scaled_train[-n_input:]
-			current_batch = first_eval_batch.reshape((1, n_input, n_features))
-
-
-			test_predictions = []
-
-			first_eval_batch = scaled_train[-n_input:]
-			current_batch = first_eval_batch.reshape((1, n_input, n_features))
-
-			for i in range(len(test)):
-    
-				# get the prediction value for the first batch
-				current_pred = model.predict(current_batch)[0]
-    
-				# append the prediction into the array
-				test_predictions.append(current_pred) 
-    
-				# use the prediction to update the batch and remove the first value
-				current_batch = np.append(current_batch[:,1:,:],[[current_pred]],axis=1)
+		for i,row in df_receiptdata.iterrows():
+			if df_receiptdata.at[i,'province'] in coastal_prov:
+				df_receiptdata.at[i,'region'] ='coastal'
+			else :
+				df_receiptdata.at[i,'region'] ='inland'
 
 
 
-			
-			## Making Predictions
-			true_predictions = scaler.inverse_transform(test_predictions)
-				
-			## Last day of the 
-			last_day = train.index[len(list(train['number_of_bags']))-1]
-			last_day=last_day.date()
+		###### inserting Weekday ####
 
-			import datetime
-			forward_days=[last_day+datetime.timedelta(days=1)]
-			for i in range(6):    
-				forward_days.append(forward_days[len(forward_days)-1]+datetime.timedelta(days=1))
 
-			## Prediction Values
-			pred_values=[]
-			for i in range(len(true_predictions)):
-				pred_values.append(round(true_predictions.tolist()[i][0]))
 
-				
-			## Prediction Dataframe
-			content = {'date': list(pd.to_datetime(forward_days, errors='coerce')),'number_of_bags': pred_values}
-			df_pred = pd.DataFrame(content).set_index('date')
-			df_pred.sort_index(inplace=True)
-				
-			## Show dataframe prediction page
-			st.markdown("<h5 style='text-align: center; color: black;'>Predicted Values </h5>", unsafe_allow_html=True)
-			#st.dataframe(df_pred)
 
-			## Insert join prediction and train dataframe
-			df_pred.loc[pd.to_datetime(train.index[len(train)-1], errors='coerce')] = round(train['number_of_bags'][len(train)-1])
-				
-			fig, ax = plt.subplots(figsize=(10,5))
-			plt.tight_layout()
-			labels=['historical data','prediction']
-			for i,df in enumerate([train,df_pred],1):
-				df =df.sort_index()
-				ax = plt.plot(df.index,df['number_of_bags'],label=labels[i-1])
 
-			plt.legend()
-			plt.xlabel('Date')
-			plt.ylabel('Number Of Bags')
-			plt.show()
-			st.pyplot(fig)
 
-			st.success("Success") 
+		######## Model Data Frame  #############
+
+		model_df =pd.DataFrame()
+		model_df['date']=pd.to_datetime(df_receiptdata['date'], errors='coerce')
+		model_df['region']  =df_receiptdata['region']
+		model_df['Total number of bags']  =df_receiptdata['Total number of bags']
+
+		model_df = model_df.groupby(['date','region']).agg({'Total number of bags':'sum'}).reset_index()
+
+		model_df['weekday'] = model_df['date'].dt.day_name()
+
+
+
+
+		
+		
+		
+		
+
+
+
+
+
+
+
+
+		#grouped_train =model_df.groupby(['date','weekday']).agg({'Total number of bags':'sum'}).reset_index()
+		#grouped_train_ =model_df.groupby(['date','weekday'])['Total number of bags'].agg("sum")
+
+
+
+		#if st.checkbox('Show data feed to the mode'):
+
+		#	st.dataframe(model_df)
+
+		
+
+
+		
+
+		if st.checkbox('Show Overall Weekday Performance Statistics'):
+			region_df = model_df[["weekday", 'Total number of bags']].groupby("weekday").describe()
+			st.dataframe(region_df)
+
+			csv = region_df.to_csv(index=False, sep=',')
+
+			st.download_button(label="Download data as CSV",data=csv,file_name='Weekday Performance statistics.csv',mime='text/csv', )
+
+		
+		if st.checkbox('Show Inland Performance Statistics'):
+
+			inland_df =model_df[model_df['region']=='inland']
+
+			df_inland =inland_df[["weekday", 'Total number of bags']].groupby("weekday").describe()
+			st.dataframe(df_inland)
+
+			csv = df_inland.to_csv(index=False, sep=',')
+
+			st.download_button(label="Download data as CSV",data=csv,file_name='Inland Performance statistics.csv',mime='text/csv', )
+
+
+		if st.checkbox('Show Coastal Performance Statistics'):
+
+			coastal_df =model_df[model_df['region']=='coastal']
+
+			df_coastal =coastal_df[["weekday", 'Total number of bags']].groupby("weekday").describe()
+
+			st.dataframe(df_coastal)
+
+			csv = df_inland.to_csv(index=False, sep=',')
+			st.download_button(label="Download data as CSV",data=csv,file_name='Coastal Performance statistics.csv',mime='text/csv', )
+
+
+
+
+		#region_df = model_df[["region", 'Total number of bags']].groupby("region").describe()
+
+
+
+		#st.dataframe(region_df)
+
+
+
+
+		
+			#st.info("The model trained is LSTM ( Long Short Term Memory) model,which falls under Recurrent Neural Network models. This model is a Time Series Model that uses historical data for forecasting/ predicting the number of bags in the upcoming 7 days")			
+		
+
 			
 
 
