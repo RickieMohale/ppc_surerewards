@@ -2882,7 +2882,7 @@ def main():
 			region_df = model_df[["weekday", 'Total number of bags']].groupby("weekday").describe()
 			st.dataframe(region_df)
 
-			csv = region_df.to_csv(index=False, sep=',')
+			csv = region_df.to_csv(index=True, sep=',')
 
 			st.download_button(label="Download data as CSV",data=csv,file_name='Weekday Performance statistics.csv',mime='text/csv', )
 
@@ -2894,7 +2894,7 @@ def main():
 			df_inland =inland_df[["weekday", 'Total number of bags']].groupby("weekday").describe()
 			st.dataframe(df_inland)
 
-			csv = df_inland.to_csv(index=False, sep=',')
+			csv = df_inland.to_csv(index=True, sep=',')
 
 			st.download_button(label="Download data as CSV",data=csv,file_name='Inland Performance statistics.csv',mime='text/csv', )
 
@@ -2907,7 +2907,7 @@ def main():
 
 			st.dataframe(df_coastal)
 
-			csv = df_inland.to_csv(index=False, sep=',')
+			csv = df_inland.to_csv(index=True, sep=',')
 			st.download_button(label="Download data as CSV",data=csv,file_name='Coastal Performance statistics.csv',mime='text/csv', )
 
 
