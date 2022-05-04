@@ -2390,13 +2390,24 @@ def main():
 					###### Adding Comments ##########################3
 
 					apprv_ = status[status['status']=='approved']['count'].reset_index()
-					limit_ = status[status['status']=='Limit reached.']['count'].reset_index()
 
-					apprvd_per =round(((apprv_['count'][0]+limit_['count'][0])/status['count'].sum())*100,2)
+					status_list =list(status.columns)
+
+					limit_name= ['Limit reached.']
+
+					for name in limit_name :
+						if name in status_list:
+							limit_no= limit_['count'][0]
+						else:
+							limit_no =0
 
 
 
-					
+
+									
+
+					apprvd_per =round(((apprv_['count'][0]+limit_no)/status['count'].sum())*100,2)
+
 					# creating textBox
 					left= Inches(7.5)
 					top=Inches(3)
@@ -5651,6 +5662,18 @@ def main():
 
 
 
+		##################################################
+
+
+
+		###### The numer 8 is for -4 that was captured.
+
+
+
+		#########################################
+
+
+
 
 
 		container = st.container()
@@ -5658,7 +5681,7 @@ def main():
 
 		with container:
 			with col1:
-				metric("Total No of bags from Surerewards Customers", df_receiptdata['Total number of bags'].sum())	
+				metric("Total No of bags from Surerewards Customers", df_receiptdata['Total number of bags'].sum()+8)	
 
 			with col2:
 				metric("Total No of bags from PPC130 Campaign Customers ", PPC130_receiptdata['Total number of bags'].sum())
@@ -6130,7 +6153,7 @@ def main():
 	
 
 		# Loaading Datasets
-		num_bags =pd.read_sql_query("select cast(r.updatedAt as date) as date,sum(ppc_surebuild + ppc_surecast + ppc_surecem + ppc_suretech + ppc_surewall) as number_of_bags from receipts as r inner join receiptdata as rdata on r.id =rdata.receipt_id where r.status in ('approved','Limit reached.') and cast(r.updatedAt as date)  between '2022-02-15' and current_date() group by date" ,conn)
+		num_bags =pd.read_sql_query("select cast(r.updatedAt as date) as date,sum(ppc_surebuild + ppc_surecast + ppc_surecem + ppc_suretech + ppc_surewall) as number_of_bags from receipts as r inner join receiptdata as rdata on r.id =rdata.receipt_id where r.status in ('approved','Limit reached.') and cast(r.updatedAt as date)  >= '2022-02-15'  group by date" ,conn)
 		
 		num_reg =pd.read_sql_query(" Select count(*) as num_of_reg,cast(createdAt as date) as date  from users where cast(createdAt as date) >= '2022-02-15' group by date ",conn)
 
@@ -6139,19 +6162,19 @@ def main():
 
 		num_promo_reg = pd.read_sql_query("Select cast(createdAt as date) as date,count(*) as No_Promocode from users where code = 'PPC130'   ",conn)
 
-		num_receipts_total=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status != 'unprocessed'  ",conn)
-		num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status != 'unprocessed' and cast(receipts.updatedAt as date) >='2022-02-15' group by date ",conn)
+		num_receipts_total=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id    ",conn)
+		num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where cast(receipts.updatedAt as date) >='2022-02-15' group by date ",conn)
 		
-		num_valid_receipts_total =pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') ",conn)
-		num_valid_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  ",conn)
+		num_valid_receipts_total =pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status in ('Approved','Limit reached.')  ",conn)
+		num_valid_receipts=pd.read_sql_query("SELECT count(*) as no_of_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status in ('Approved','Limit reached.')  and cast(receipts.updatedAt as date) >= '2022-02-15'  ",conn)
 
 		#num_invalid_receipts=pd.read_sql_query("SELECT count(*) as no_of_invalid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible') and cast(receipts.updatedAt as date) >= '2022-02-15'  group by date",conn)
 
-		num_user_r_upload_total=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.')  ",conn)
-		num_user_r_upload=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) >= '2022-02-15' ",conn)
+		num_user_r_upload_total=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id  ",conn)
+		num_user_r_upload=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where  cast(receipts.updatedAt as date) >= '2022-02-15' ",conn)
 
-		num_user_valid_receipts_total=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_users_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed')  ",conn)
-		num_user_valid_receipts=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_users_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  Not in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Unprocessed') and cast(receipts.updatedAt as date) >= '2022-02-15'  ",conn)
+		num_user_valid_receipts_total=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_users_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Approved','Limit reached.')  ",conn)
+		num_user_valid_receipts=pd.read_sql_query("SELECT count(distinct(users.id)) as no_of_users_valid_receipts ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where status  in ('Approved','Limit reached.')  and cast(receipts.updatedAt as date) >= '2022-02-15'  ",conn)
 		
 
 		
