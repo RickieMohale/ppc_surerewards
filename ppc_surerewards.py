@@ -267,7 +267,7 @@ def main():
 
 
 
-			df_receiptdata=pd.read_sql_query("SELECT mechant,location,action as platform_massage,cast(createdAt as date) as receipt_upload_date,cast(updatedAt as date) as receipt_captured_date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(updatedAt as date) = '"+ str(selected_date)+"'" ,conn)
+			df_receiptdata=pd.read_sql_query("SELECT mechant,location,action as platform_massage,cast(createdAt as date) as receipt_upload_date,cast(updatedAt as date) as receipt_captured_date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster,ppc_motor as  ppc_mortar FROM receiptdata where cast(updatedAt as date) = '"+ str(selected_date)+"'" ,conn)
 
 			camp_u_recpt = pd.read_sql_query( "SELECT count(users.id) as value from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','approved','Limit Reached.') and cast(receipts.updatedAt as date) ='"+str(selected_date)+"'and cast(users.createdAt as date ) >= '2022-02-15' and cast(users.createdAt as date )<'"+str(selected_date)+"'",conn)
 			camp_u_numb = pd.read_sql_query( "SELECT count(distinct(users.id)) as value from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','approved','Limit Reached.') and cast(receipts.updatedAt as date) ='"+str(selected_date)+"'and cast(users.createdAt as date ) >= '2022-02-15' and cast(users.createdAt as date ) <'"+str(selected_date)+"'",conn)
@@ -288,12 +288,12 @@ def main():
 
 
 
-			bags_by_date=pd.read_sql_query("SELECT cast(updatedAt as date) as date ,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(updatedAt as date) between '2022-02-15' and '"+ str(selected_date)+"'" ,conn)
-			bags_by_date['Total number of bags'] =bags_by_date['ppc_surebuild']+bags_by_date['ppc_surecem'] +bags_by_date['ppc_surecast']+bags_by_date['ppc_suretech']+bags_by_date['ppc_surewall']+bags_by_date['ppc_sureroad']+bags_by_date['ppc_plaster']+bags_by_date['ppc_motor']
+			bags_by_date=pd.read_sql_query("SELECT cast(updatedAt as date) as date ,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster,ppc_motor as  ppc_mortar FROM receiptdata where cast(updatedAt as date) between '2022-02-15' and '"+ str(selected_date)+"'" ,conn)
+			bags_by_date['Total number of bags'] =bags_by_date['ppc_surebuild']+bags_by_date['ppc_surecem'] +bags_by_date['ppc_surecast']+bags_by_date['ppc_suretech']+bags_by_date['ppc_surewall']+bags_by_date['ppc_sureroad']+bags_by_date['ppc_plaster']+bags_by_date['ppc_mortar']
 			
 			## Taking posative Values
 			bags_by_date = bags_by_date[bags_by_date['Total number of bags']>0]
-			bags_by_date['ppc_motor'] = bags_by_date['ppc_motor'].abs()
+			bags_by_date['ppc_mortar'] = bags_by_date['ppc_mortar'].abs()
 
 
 			num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code !='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) = '"+str(selected_date)+"' ",conn)
@@ -346,12 +346,12 @@ def main():
 			df_receiptdata['mechant'] = df_receiptdata['mechant'].str.replace('\d+', '', regex=True)			
 
 
-			df_receiptdata['Total number of bags'] =df_receiptdata['ppc_surebuild']+df_receiptdata['ppc_surecem'] +df_receiptdata['ppc_surecast']+df_receiptdata['ppc_suretech']+df_receiptdata['ppc_surewall']+df_receiptdata['ppc_sureroad']+df_receiptdata['ppc_plaster']+df_receiptdata['ppc_motor']
+			df_receiptdata['Total number of bags'] =df_receiptdata['ppc_surebuild']+df_receiptdata['ppc_surecem'] +df_receiptdata['ppc_surecast']+df_receiptdata['ppc_suretech']+df_receiptdata['ppc_surewall']+df_receiptdata['ppc_sureroad']+df_receiptdata['ppc_plaster']+df_receiptdata['ppc_mortar']
 
 			## Taking posative Values
 			df_receiptdata = df_receiptdata[df_receiptdata['Total number of bags']>0]
 
-			df_receiptdata['ppc_motor'] = df_receiptdata['ppc_motor'].abs()
+			df_receiptdata['ppc_mortar'] = df_receiptdata['ppc_mortar'].abs()
 
 
 			#
@@ -1140,9 +1140,9 @@ def main():
 
 					################# Addding  Plot  ################################
 
-					producd_region = df_receiptdata.groupby(['province'])['ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor'].sum().reset_index()
+					producd_region = df_receiptdata.groupby(['province'])['ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar'].sum().reset_index()
 
-					product = pd.DataFrame({"ppc_surebuild":list(producd_region['ppc_surebuild']),'ppc_surecem':list(producd_region['ppc_surecem']),'ppc_surecast':list(producd_region['ppc_surecast']),'ppc_suretech':list(producd_region['ppc_suretech']),'ppc_surewall':list(producd_region['ppc_surewall']),'ppc_sureroad':list(producd_region['ppc_sureroad']),'ppc_plaster':list(producd_region['ppc_plaster']),'ppc_motor':list(producd_region['ppc_motor'])}, index=producd_region['province'])
+					product = pd.DataFrame({"ppc_surebuild":list(producd_region['ppc_surebuild']),'ppc_surecem':list(producd_region['ppc_surecem']),'ppc_surecast':list(producd_region['ppc_surecast']),'ppc_suretech':list(producd_region['ppc_suretech']),'ppc_surewall':list(producd_region['ppc_surewall']),'ppc_sureroad':list(producd_region['ppc_sureroad']),'ppc_plaster':list(producd_region['ppc_plaster']),'ppc_mortar':list(producd_region['ppc_mortar'])}, index=producd_region['province'])
 
 
 
@@ -1272,7 +1272,7 @@ def main():
 
 					############## Adding Merchant Performance
 
-					#name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+					#name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
 
 					#df =df_receiptdata.groupby(['mechant'])[name_].apply(lambda x : x.astype(int).sum())
 					#sorted_df=df.sort_values('Total number of bags', ascending=False)
@@ -1284,7 +1284,7 @@ def main():
 
 
 					################# Top Performong Merchant By Sale Quantity
-					name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+					name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
 
 					df =df_receiptdata.groupby(['city'])[name_].apply(lambda x : x.astype(int).sum())
 					sorted_df=df.sort_values('Total number of bags', ascending=False)
@@ -1712,7 +1712,7 @@ def main():
 
 					############## Adding Merchant Performance
 
-					#name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+					#name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
 
 					#df =df_receiptdata.groupby(['mechant'])[name_].apply(lambda x : x.astype(int).sum())
 					#sorted_df=df.sort_values('Total number of bags', ascending=False)
@@ -1724,7 +1724,7 @@ def main():
 
 
 					################# Top Performong Merchant By Sale Quantity
-					name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+					name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
 
 					df =df_receiptdata.groupby(['mechant'])[name_].apply(lambda x : x.astype(int).sum())
 					sorted_df=df.sort_values('Total number of bags', ascending=False)
@@ -2871,7 +2871,7 @@ def main():
 
 
 
-			df_receiptdata=pd.read_sql_query("SELECT mechant,location,action as platform_massage,cast(createdAt as date) as receipt_upload_date,cast(updatedAt as date) as receipt_captured_date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(updatedAt as date) between '"+ str(start_date)+"' and '"+ str(end_date)+"'" ,conn)
+			df_receiptdata=pd.read_sql_query("SELECT mechant,location,action as platform_massage,cast(createdAt as date) as receipt_upload_date,cast(updatedAt as date) as receipt_captured_date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster,ppc_motor as ppc_mortar FROM receiptdata where cast(updatedAt as date) between '"+ str(start_date)+"' and '"+ str(end_date)+"'" ,conn)
 
 			camp_u_recpt = pd.read_sql_query( "SELECT count(users.id) as value from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','approved','Limit Reached.') and cast(receipts.updatedAt as date) between'"+ str(start_date)+"' and '"+ str(end_date)+"'and cast(users.createdAt as date ) >= '2022-02-15' and cast(users.createdAt as date )<'"+str(start_date)+"'",conn)
 			camp_u_numb = pd.read_sql_query( "SELECT count(distinct(users.id)) as value from users inner join receipts on users.id=receipts.user_id where status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','approved','Limit Reached.') and cast(receipts.updatedAt as date) between'"+ str(start_date)+"' and '"+ str(end_date)+"'and cast(users.createdAt as date ) >= '2022-02-15' and cast(users.createdAt as date ) <'"+str(start_date)+"'",conn)
@@ -2892,12 +2892,12 @@ def main():
 
 
 
-			bags_by_date=pd.read_sql_query("SELECT cast(updatedAt as date) as date ,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(updatedAt as date) between '2022-02-15' and '"+ str(end_date)+"'" ,conn)
-			bags_by_date['Total number of bags'] =bags_by_date['ppc_surebuild']+bags_by_date['ppc_surecem'] +bags_by_date['ppc_surecast']+bags_by_date['ppc_suretech']+bags_by_date['ppc_surewall']+bags_by_date['ppc_sureroad']+bags_by_date['ppc_plaster']+bags_by_date['ppc_motor']
+			bags_by_date=pd.read_sql_query("SELECT cast(updatedAt as date) as date ,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster,ppc_motor as ppc_mortar FROM receiptdata where cast(updatedAt as date) between '2022-02-15' and '"+ str(end_date)+"'" ,conn)
+			bags_by_date['Total number of bags'] =bags_by_date['ppc_surebuild']+bags_by_date['ppc_surecem'] +bags_by_date['ppc_surecast']+bags_by_date['ppc_suretech']+bags_by_date['ppc_surewall']+bags_by_date['ppc_sureroad']+bags_by_date['ppc_plaster']+bags_by_date['ppc_mortar']
 			
 			## Taking posative Values
 			bags_by_date = bags_by_date[bags_by_date['Total number of bags']>0]
-			bags_by_date['ppc_motor'] = bags_by_date['ppc_motor'].abs()
+			bags_by_date['ppc_mortar'] = bags_by_date['ppc_mortar'].abs()
 
 
 			num_receipts=pd.read_sql_query("SELECT count(*) as no_of_receipts_upload ,cast(receipts.updatedAt as date) as date from users inner join receipts on users.id=receipts.user_id where code !='PPC130' and status  in ('Duplicate receipts','outdated Receipt','Receipt cut off.','Receipt not relevant', 'Receipt not visible','Approved','Limit reached.') and cast(receipts.updatedAt as date) between '"+ str(start_date)+"' and '"+ str(end_date)+"' ",conn)
@@ -2923,12 +2923,12 @@ def main():
 
 			######## bags inter #########################
 
-			bags_interval=pd.read_sql_query("SELECT cast(updatedAt as date) as date ,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(updatedAt as date) between '"+str(start_date)+"' and '"+ str(end_date)+"'" ,conn)
-			bags_interval['Total number of bags'] =bags_interval['ppc_surebuild']+bags_interval['ppc_surecem'] +bags_interval['ppc_surecast']+bags_interval['ppc_suretech']+bags_interval['ppc_surewall']+bags_interval['ppc_sureroad']+bags_interval['ppc_plaster']+bags_interval['ppc_motor']
+			bags_interval=pd.read_sql_query("SELECT cast(updatedAt as date) as date ,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster,ppc_motor as ppc_mortar FROM receiptdata where cast(updatedAt as date) between '"+str(start_date)+"' and '"+ str(end_date)+"'" ,conn)
+			bags_interval['Total number of bags'] =bags_interval['ppc_surebuild']+bags_interval['ppc_surecem'] +bags_interval['ppc_surecast']+bags_interval['ppc_suretech']+bags_interval['ppc_surewall']+bags_interval['ppc_sureroad']+bags_interval['ppc_plaster']+bags_interval['ppc_mortar']
 			
 			## Taking posative Values
 			bags_interval = bags_interval[bags_interval['Total number of bags']>0]
-			bags_interval['ppc_motor'] =bags_interval['ppc_motor'].abs()
+			bags_interval['ppc_mortar'] =bags_interval['ppc_mortar'].abs()
 
 			
 			bags_interval =bags_interval.groupby(['date'])[['Total number of bags']].apply(lambda x : x.astype(int).sum())
@@ -2973,12 +2973,12 @@ def main():
 			df_receiptdata['mechant'] = df_receiptdata['mechant'].str.replace('\d+', '', regex=True)			
 
 
-			df_receiptdata['Total number of bags'] =df_receiptdata['ppc_surebuild']+df_receiptdata['ppc_surecem'] +df_receiptdata['ppc_surecast']+df_receiptdata['ppc_suretech']+df_receiptdata['ppc_surewall']+df_receiptdata['ppc_sureroad']+df_receiptdata['ppc_plaster']+df_receiptdata['ppc_motor']
+			df_receiptdata['Total number of bags'] =df_receiptdata['ppc_surebuild']+df_receiptdata['ppc_surecem'] +df_receiptdata['ppc_surecast']+df_receiptdata['ppc_suretech']+df_receiptdata['ppc_surewall']+df_receiptdata['ppc_sureroad']+df_receiptdata['ppc_plaster']+df_receiptdata['ppc_mortar']
 
 			## Taking posative Values
 			df_receiptdata = df_receiptdata[df_receiptdata['Total number of bags']>0]
 
-			df_receiptdata['ppc_motor'] = df_receiptdata['ppc_motor'].abs()
+			df_receiptdata['ppc_mortar'] = df_receiptdata['ppc_mortar'].abs()
 
 
 			#
@@ -3767,13 +3767,13 @@ def main():
 
 					################# Addding  Plot  ################################
 
-					producd_region = df_receiptdata.groupby(['province'])['ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor'].sum().reset_index()
+					producd_region = df_receiptdata.groupby(['province'])['ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar'].sum().reset_index()
 					
 
 
 					
 
-					product = pd.DataFrame({"ppc_surebuild":list(producd_region['ppc_surebuild']),'ppc_surecem':list(producd_region['ppc_surecem']),'ppc_surecast':list(producd_region['ppc_surecast']),'ppc_suretech':list(producd_region['ppc_suretech']),'ppc_surewall':list(producd_region['ppc_surewall']),'ppc_sureroad':list(producd_region['ppc_sureroad']),'ppc_plaster':list(producd_region['ppc_plaster']),'ppc_motor':list(producd_region['ppc_motor'])}, index=producd_region['province'])
+					product = pd.DataFrame({"ppc_surebuild":list(producd_region['ppc_surebuild']),'ppc_surecem':list(producd_region['ppc_surecem']),'ppc_surecast':list(producd_region['ppc_surecast']),'ppc_suretech':list(producd_region['ppc_suretech']),'ppc_surewall':list(producd_region['ppc_surewall']),'ppc_sureroad':list(producd_region['ppc_sureroad']),'ppc_plaster':list(producd_region['ppc_plaster']),'ppc_mortar':list(producd_region['ppc_mortar'])}, index=producd_region['province'])
 
 
 
@@ -3952,7 +3952,7 @@ def main():
 
 					############## Adding Merchant Performance
 
-					#name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+					#name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
 
 					#df =df_receiptdata.groupby(['mechant'])[name_].apply(lambda x : x.astype(int).sum())
 					#sorted_df=df.sort_values('Total number of bags', ascending=False)
@@ -3964,7 +3964,7 @@ def main():
 
 
 					################# Top Performong Merchant By Sale Quantity
-					name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+					name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
 
 					df =df_receiptdata.groupby(['city'])[name_].apply(lambda x : x.astype(int).sum())
 					sorted_df=df.sort_values('Total number of bags', ascending=False)
@@ -4392,7 +4392,7 @@ def main():
 
 					############## Adding Merchant Performance
 
-					#name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+					#name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
 
 					#df =df_receiptdata.groupby(['mechant'])[name_].apply(lambda x : x.astype(int).sum())
 					#sorted_df=df.sort_values('Total number of bags', ascending=False)
@@ -4404,7 +4404,7 @@ def main():
 
 
 					################# Top Performong Merchant By Sale Quantity
-					name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+					name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
 
 					df =df_receiptdata.groupby(['mechant'])[name_].apply(lambda x : x.astype(int).sum())
 					sorted_df=df.sort_values('Total number of bags', ascending=False)
@@ -5070,9 +5070,26 @@ def main():
 					###### Adding Comments ##########################3
 
 					apprv_ = status[status['status']=='approved']['count'].reset_index()
-					limit_ = status[status['status']=='Limit reached.']['count'].reset_index()
 
-					apprvd_per =round(((apprv_['count'][0]+limit_['count'][0])/status['count'].sum())*100)
+					
+					status_list =list(status.columns)
+
+					limit_name= ['Limit reached.']
+
+					for name in limit_name :
+						if name in status_list:
+							limit_no= limit_['count'][0]
+						else:
+							limit_no =0
+
+
+
+
+									
+
+					apprvd_per =round(((apprv_['count'][0]+limit_no)/status['count'].sum())*100,2)
+
+
 
 
 
@@ -5528,7 +5545,7 @@ def main():
 	if selection == "Product Performance":
 
 
-		df_receiptdata=pd.read_sql_query("SELECT mechant,location,action as platform_massage,cast(createdAt as date) as receipt_upload_date,cast(updatedAt as date) as receipt_captured_date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata ",conn)
+		df_receiptdata=pd.read_sql_query("SELECT mechant,location,action as platform_massage,cast(createdAt as date) as receipt_upload_date,cast(updatedAt as date) as receipt_captured_date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor as ppc_mortar FROM receiptdata ",conn)
 
 
 		### split data into city and province
@@ -5564,12 +5581,12 @@ def main():
 
 
 
-		df_receiptdata['Total number of bags'] =df_receiptdata['ppc_surebuild']+df_receiptdata['ppc_surecem'] +df_receiptdata['ppc_surecast']+df_receiptdata['ppc_suretech']+df_receiptdata['ppc_surewall']+df_receiptdata['ppc_sureroad']+df_receiptdata['ppc_plaster']+df_receiptdata['ppc_motor']
+		df_receiptdata['Total number of bags'] =df_receiptdata['ppc_surebuild']+df_receiptdata['ppc_surecem'] +df_receiptdata['ppc_surecast']+df_receiptdata['ppc_suretech']+df_receiptdata['ppc_surewall']+df_receiptdata['ppc_sureroad']+df_receiptdata['ppc_plaster']+df_receiptdata['ppc_mortar']
 
 		## Taking posative Values
 		df_receiptdata = df_receiptdata[df_receiptdata['Total number of bags']>0]
 
-		df_receiptdata['ppc_motor'] = df_receiptdata['ppc_motor'].abs()
+		df_receiptdata['ppc_mortar'] = df_receiptdata['ppc_mortar'].abs()
 
         ## Receipt data from  PPC130 Campaign
 		PPC130_receiptdata = df_receiptdata [df_receiptdata['receipt_captured_date']>=pd.to_datetime("'2022-02-15'").date()]
@@ -5731,7 +5748,7 @@ def main():
 				metric('ppc_plaster', df_receiptdata['ppc_plaster'].sum())
 
 			with col4:
-				metric('ppc_motor', abs(df_receiptdata['ppc_motor'].sum()))
+				metric('ppc_mortar', abs(df_receiptdata['ppc_mortar'].sum()))
 
 
 		
@@ -5741,9 +5758,9 @@ def main():
 	
 
 		
-		product_name = ['ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+		product_name = ['ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
 
-		product_values =[df_receiptdata['ppc_surebuild'].sum(),df_receiptdata['ppc_surecem'].sum() ,df_receiptdata['ppc_surecast'].sum(),df_receiptdata['ppc_suretech'].sum(),df_receiptdata['ppc_surewall'].sum(),df_receiptdata['ppc_sureroad'].sum(),df_receiptdata['ppc_plaster'].sum(),df_receiptdata['ppc_motor'].sum()]
+		product_values =[df_receiptdata['ppc_surebuild'].sum(),df_receiptdata['ppc_surecem'].sum() ,df_receiptdata['ppc_surecast'].sum(),df_receiptdata['ppc_suretech'].sum(),df_receiptdata['ppc_surewall'].sum(),df_receiptdata['ppc_sureroad'].sum(),df_receiptdata['ppc_plaster'].sum(),df_receiptdata['ppc_mortar'].sum()]
 
 		df = pd.DataFrame({'PPC Products': product_name,  'Total No of Bags': product_values})
 		
@@ -5762,7 +5779,7 @@ def main():
 		top_mech=st.radio("Top Performing Merchant",("Top 10 Merchant","Top 20 Merchant"))
 		### Top Performing Machants
 
-		name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_motor']
+		name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
 
 		df =df_receiptdata.groupby(['mechant'])[name_].apply(lambda x : x.astype(int).sum())
 		sorted_df=df.sort_values('Total number of bags', ascending=False)
@@ -5953,7 +5970,7 @@ def main():
 		#############  Load data ################
 
 
-		df_receiptdata=pd.read_sql_query("SELECT location,cast(createdAt as date) as date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_motor FROM receiptdata where cast(createdAt as date) >= '2022-02-15'" ,conn)
+		df_receiptdata=pd.read_sql_query("SELECT location,cast(createdAt as date) as date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster, ppc_mortar FROM receiptdata where cast(createdAt as date) >= '2022-02-15'" ,conn)
  
 		df_receiptdata[['city','province']] = df_receiptdata['location'].str.split(',', expand=True)
 		df_receiptdata.drop('location', axis=1, inplace=True)
@@ -5981,12 +5998,12 @@ def main():
 		df_receiptdata['province'] = df_receiptdata['province'].str.replace('\d+', '', regex=True)
 
 
-		df_receiptdata['Total number of bags'] =df_receiptdata['ppc_surebuild']+df_receiptdata['ppc_surecem'] +df_receiptdata['ppc_surecast']+df_receiptdata['ppc_suretech']+df_receiptdata['ppc_surewall']+df_receiptdata['ppc_sureroad']+df_receiptdata['ppc_plaster']+df_receiptdata['ppc_motor']
+		df_receiptdata['Total number of bags'] =df_receiptdata['ppc_surebuild']+df_receiptdata['ppc_surecem'] +df_receiptdata['ppc_surecast']+df_receiptdata['ppc_suretech']+df_receiptdata['ppc_surewall']+df_receiptdata['ppc_sureroad']+df_receiptdata['ppc_plaster']+df_receiptdata['ppc_mortar']
 
 		## Taking posative Values
 		df_receiptdata = df_receiptdata[df_receiptdata['Total number of bags']>0]
 
-		df_receiptdata['ppc_motor'] = df_receiptdata['ppc_motor'].abs()
+		df_receiptdata['ppc_mortar'] = df_receiptdata['ppc_mortar'].abs()
 
 
 		#
