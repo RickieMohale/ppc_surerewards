@@ -3,7 +3,7 @@
 
 
 
-st.markdown("<h1 style='text-align: center; color: red;'>PPC130 Surerewards Insights</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: red;'>Surerewards Customers Insights Page</h1>", unsafe_allow_html=True)
 
 
 # Loaading Datasets
@@ -37,7 +37,9 @@ num_user_valid_receipts=pd.read_sql_query("SELECT count(distinct(users.id)) as n
 status=pd.read_sql_query("select status, count(*) as count from users as u join receipts as r on u.id = r.user_id where cast(r.createdAt as date) >='2022-04-15' and status != 'unprocessed' group by status",conn)
 
 
+sms_numbers=pd.read_sql_query("select count(*) as Number_Of_SMS_Sent ,cast(createdAt as date) as date from sms where body !='' and cast(createdAt as date)>='2022-02-15' group by date order by date",conn)
 
+sms_numbers_on_date=pd.read_sql_query("select type,body,cast(createdAt as date) as date from sms where body !='' and cast(createdAt as date)>='2022-02-15'",conn)
 
 
     
@@ -379,32 +381,40 @@ with container:
 
 
 
+st.markdown("<h3 style='text-align: center; color: red;'>PPC130 Customer Communication By SMS </h3>", unsafe_allow_html=True)
 
 
 
-        
+fig, ax = plt.subplots(figsize=(10, 6))
+
+
+# Same, but add a stronger line on top (edge)
+plt.fill_between( sms_numbers['date'] , sms_numbers['Number_Of_SMS_Sent'] , color="red", alpha=0.2)
+plt.plot(sms_numbers['date'] , sms_numbers['Number_Of_SMS_Sent'] , color="black", alpha=0.6)
+# See the line plot function to learn how to customize the plt.plot function
+
+
+ax.set_ylabel('Number Of SMS Sent')
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+
+# Define the date format
+date_form = DateFormatter("%b-%d")
+ax.xaxis.set_major_formatter(date_form)
+
+st.pyplot(fig)
 
 
 
 
-		
+
+
+total_sms_date =len(list(sms_numbers_on_date['body']))
+withdrawm_no =sms_numbers_on_date[sms_numbers_on_date['body'].str.contains('withdraw')]['body'].count()
+succes_no =sms_numbers_on_date[sms_numbers_on_date['body'].str.contains('successfully captured')]['body'].count()
+less_bag_no =sms_numbers_on_date[sms_numbers_on_date['body'].str.contains('Miss Out')]['body'].count()
 
 
 
-				
-
-				
-			
-
-			
-
-
-		
-		#def metric_row(data):
-		#	#for i, (label, value) in enumerate(data.items()):
-		#	#	with columns[i]:
-		#	#		components.html(_build_metric(label, value))
-
-		#def metric(label, value):
-		#	components.html(_build_metric(label, value))
+st.info ('A total  of '+ str( sms_numbers['Number_Of_SMS_Sent'].sum() )+' SMSes have been sent during the PPC130 campaign.From the SMSes sent ,'+str(withdrawm_no)+' was about withdrawal request,which is '+str(round((withdrawm_no/total_sms_date)*100))+'% of the total SMS sent.'+str(succes_no )+' was about successfully captured receipts, which is '+str(round((succes_no/total_sms_date)*100))+'%  of the total SMS sent.'+str(less_bag_no)+' was SMS sent to customers who bought less than 10 bags, which is '+str(round((less_bag_no/total_sms_date)*100))+'%  of the total SMS sent.')
 

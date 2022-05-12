@@ -3759,7 +3759,7 @@ if report_type == "Time Frame Report":
 
 
 
-            ################# Top Performong Merchant By Sale Quantity
+            ################# 
             name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
 
             df =df_receiptdata.groupby(['city'])[name_].apply(lambda x : x.astype(int).sum())

@@ -202,7 +202,7 @@ def main():
 	# Creating sidebar with selection box -
 	# you can create multiple pages this way
 	
-	options = ["Surerewards Customers","Performance Target Page","Product Performance","Customer Location","Auto Reports"]
+	options = ["Surerewards Customers", "Customer Profiling","Performance Target Page","Product Performance","Customer Location","Auto Reports"]
 	#
 
 	selection = st.sidebar.radio("Select Page:",options)
@@ -225,13 +225,15 @@ def main():
 
 
 
-	# Building out the "Information" page
 	if selection == "Performance Target Page":
 
 		exec(open("./pages/performance_target_page.py").read())
 
 		
 		
+	if selection == "Customer Profiling":
+
+		exec(open("./pages/customer_profile_page.py").read())
 
 
 

@@ -361,3 +361,162 @@ if top_mech =="Top 20 Merchant":
             plt.ylabel('Merchant')
             plt.xlabel('Sales Frequency')
             st.pyplot(fig)
+
+
+st.markdown("<h3 style='text-align: center; color: red;'>Product Performance By Store Location</h3>", unsafe_allow_html=True)
+
+
+name_ = ['Total number of bags','ppc_surebuild','ppc_surecem','ppc_surecast','ppc_suretech','ppc_surewall','ppc_sureroad','ppc_plaster','ppc_mortar']
+
+df =df_receiptdata.groupby(['city'])[name_].apply(lambda x : x.astype(int).sum())
+sorted_df=df.sort_values('Total number of bags', ascending=False)
+
+
+
+
+
+############### Top city by sales  frequency
+location_freq_dict = unique_names(df_receiptdata['city'])
+data = {'Store Location': location_freq_dict.keys(), 'Sales Frequency': location_freq_dict.values()}
+location_freq_dict = pd.DataFrame.from_dict(data)
+
+
+
+top_store_location=st.radio("Top Performing Store Location",("Top 10 Store Locations","Top 20 Store Locations"))
+
+
+
+if top_store_location == "Top 10 Store Locations":
+    
+    
+    container = st.container()
+    col1, col2 = st.columns(2)
+
+    with container:
+        with col1:
+            plot_df = sorted_df.head(10)
+            plot_df = plot_df.sort_values('Total number of bags', ascending=True)
+            plot_df = plot_df.drop(['Total number of bags'], axis = 1)
+
+
+            fig, ax = plt.subplots()
+            plt.tight_layout()	
+
+            ax= plot_df.plot.barh(stacked=True)
+                
+
+            # add labels
+            ax.legend(loc='lower right')
+            ax.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+
+
+            ax.set_ylabel("Store Location")
+            ax.set_xlabel("Number Of Bags")
+            st.pyplot(plt.show())
+
+
+        with col2:
+
+            plot_df_location_freq =location_freq_dict .head(10)
+            plot_df_location_freq=plot_df_location_freq.sort_values('Sales Frequency', ascending=True)
+
+
+            fig, ax = plt.subplots()
+            plt.tight_layout()
+
+
+            bars = ax.barh(list(plot_df_location_freq['Store Location']) ,list(plot_df_location_freq['Sales Frequency']))
+
+            ax.legend(loc='lower right')
+            ax.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+
+            for  bar in bars:
+                width = bar.get_width()
+                label_y = bar.get_y() + bar.get_height() / 2
+                plt.text(width, label_y, s=f'{width}')
+
+            plt.ylabel('Store Location')
+            plt.xlabel('Sales Frequency')
+
+            st.pyplot(fig)
+
+
+
+
+if top_store_location == "Top 20 Store Locations":
+    
+    
+    container = st.container()
+    col1, col2 = st.columns(2)
+
+    with container:
+        with col1:
+            plot_df = sorted_df.head(20)
+            plot_df = plot_df.sort_values('Total number of bags', ascending=True)
+            plot_df = plot_df.drop(['Total number of bags'], axis = 1)
+
+
+            fig, ax = plt.subplots()
+            plt.tight_layout()	
+
+            ax= plot_df.plot.barh(stacked=True)
+                
+
+            # add labels
+            ax.legend(loc='lower right')
+            ax.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+
+
+            ax.set_ylabel("Store Location")
+            ax.set_xlabel("Number Of Bags")
+            st.pyplot(plt.show())
+
+
+        with col2:
+
+            plot_df_location_freq =location_freq_dict .head(20)
+            plot_df_location_freq=plot_df_location_freq.sort_values('Sales Frequency', ascending=True)
+
+
+            fig, ax = plt.subplots()
+            plt.tight_layout()
+
+
+            bars = ax.barh(list(plot_df_location_freq['Store Location']) ,list(plot_df_location_freq['Sales Frequency']))
+
+            ax.legend(loc='lower right')
+            ax.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+
+            for  bar in bars:
+                width = bar.get_width()
+                label_y = bar.get_y() + bar.get_height() / 2
+                plt.text(width, label_y, s=f'{width}')
+
+            plt.ylabel('Store Location')
+            plt.xlabel('Sales Frequency')
+
+            st.pyplot(fig)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
