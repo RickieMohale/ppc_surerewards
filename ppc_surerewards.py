@@ -26,6 +26,9 @@ from ast import Str
 import streamlit as st
 import joblib,os
 
+
+
+
 # Data dependencies
 import pandas as pd
 
@@ -49,6 +52,9 @@ st.set_option('deprecation.showPyplotGlobalUse', False)
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import altair as alt
+from streamlit_echarts import st_echarts
+
+
 
 
 
@@ -79,6 +85,11 @@ import difflib
 from matplotlib.dates import DateFormatter, DayLocator
 import matplotlib.dates as mdates
 from matplotlib.dates import DateFormatter
+
+
+
+### Used For Saving Files ###############
+from io import BytesIO
 
 
 
@@ -113,36 +124,49 @@ def main():
 
 
 
-	
+	st.markdown("""
+        <style>
+               .css-18e3th9 {
+                    padding-top: 2rem;
+                    padding-bottom: 2rem;
+                    padding-left: 5rem;
+                    padding-right: 5rem;
+                }
+               .css-1d391kg {
+                    padding-top: 3.5rem;
+                    padding-right: 1rem;
+                    padding-bottom: 3.5rem;
+                    padding-left: 1rem;
+                }
+        </style>
+        """, unsafe_allow_html=True)
 		
-	st.sidebar.image("resources/imgs/surerewards.png", use_column_width=True)
+	st.sidebar.image("resources/imgs/PPC_Logo.png", use_column_width=True)
+
+
+
+
+	########## Heading Logo #######################
 	
 	def load_image(image_file):
 		img = Image.open(image_file)
 		return img
 	
-	col1, col2, col3 = st.columns([1,20,1])
+	col1, col2, col3 = st.columns([1,2,0.6])
 
 	with col1:
-		st.write("")
+		st.image("resources/imgs/top_left.PNG", use_column_width=True)
 
 	with col2:
-		st.image("resources/imgs/Heading_Logo.PNG", use_column_width=True)
-	with col3:
 		st.write("")
+	with col3:
+		st.image("resources/imgs/surerewards.PNG", use_column_width=True)
 
 
 
 
 
-	st.info("The following visuals are based on real time data from the surerewards platform (They change with time)")
 
-	## Show the latest Update Time
-	from datetime import datetime
-
-	SA_time = pytz.timezone('Africa/Johannesburg') 
-	datetime_SA = datetime.now(SA_time)
-	metric("Latest Time Update", datetime_SA.strftime('%Y-%m-%d %H:%M %p'))
 
 	def line_graph(source, x, y):
 		# Create a selection that chooses the nearest point & selects based on x-value
@@ -155,7 +179,7 @@ def main():
 
 		# Draw an invisible rule at the location of the selection
 		tooltips = (alt.Chart(source).mark_rule(opacity=0).encode(x=x,y=y,tooltip=[x, y, alt.Tooltip("delta", format=".2%")],).add_selection(hover))
-		return (lines + points + tooltips).interactive()
+		return (lines + points + tooltips).mark_area(line={'color':'darkgreen'},color=alt.Gradient(gradient='linear',stops=[alt.GradientStop(color='white', offset=0),alt.GradientStop(color='darkgreen', offset=1)],x1=1,x2=1,y1=1,y2=0)).interactive()
 	
 	
 	
@@ -202,7 +226,7 @@ def main():
 	# Creating sidebar with selection box -
 	# you can create multiple pages this way
 	
-	options = ["Surerewards Customers", "Customer Profiling","Performance Target Page","Product Performance","Customer Location","Auto Reports"]
+	options = ["Surerewards Customers", "Customer Profiling","Performance Target Page","Product Performance","Auto Reports"]
 	#
 
 	selection = st.sidebar.radio("Select Page:",options)
@@ -217,11 +241,6 @@ def main():
 
 
 
-
-
-	if selection == "Customer Location":
-
-		exec(open("./pages/customer_location_page.py").read())
 
 
 
@@ -275,6 +294,26 @@ def main():
 	if selection == "Surerewards Customers":
 
 		exec(open("./pages/surerewards_customer_page.py").read())
+
+
+
+
+
+	########## Bottom  Logo #######################
+	
+	def load_image(image_file):
+		img = Image.open(image_file)
+		return img
+	
+	col1, col2, col3 = st.columns([0.3,2,0.6])
+
+	with col1:
+		st.image("resources/imgs/AA_Logo.PNG", use_column_width=True)
+
+	with col2:
+		st.image("resources/imgs/small_logo.PNG", use_column_width=True)
+	with col3:
+		st.image("resources/imgs/bottom_right.PNG", use_column_width=True)
 
 
 

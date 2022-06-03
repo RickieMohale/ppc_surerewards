@@ -36,7 +36,7 @@ st.info(" Weekly targets are based on the statistics of the number of bags sold 
 
 
 #############  Load data ################
-
+num_reg =pd.read_sql_query(" Select count(*) as number_of_registration,cast(createdAt as date) as date  from users where cast(createdAt as date) >= '2022-02-15' group by date ",conn)
 
 df_receiptdata=pd.read_sql_query("SELECT location,cast(createdAt as date) as date,ppc_surebuild,ppc_surecem,ppc_surecast,ppc_suretech,ppc_surewall,ppc_sureroad,ppc_plaster,ppc_motor as ppc_mortar FROM receiptdata where cast(createdAt as date) >= '2022-02-15'" ,conn)
 
@@ -55,13 +55,11 @@ df_receiptdata['province'] = df_receiptdata['province'].str.lower()
 
 
 #Removing all punctuations
-
 df_receiptdata['city'] =df_receiptdata['city'].str.replace(r'[^\w\s]+', '', regex=True)
 df_receiptdata['province'] = df_receiptdata['province'].str.replace(r'[^\w\s]+', '', regex=True)
 
 
 #Removing all numbers from strings
-
 df_receiptdata['city'] =df_receiptdata['city'].str.replace('\d+', '', regex=True)
 df_receiptdata['province'] = df_receiptdata['province'].str.replace('\d+', '', regex=True)
 
@@ -109,6 +107,9 @@ for i,row in df_receiptdata.iterrows():
 ###### Separating Data####
 
 
+
+
+
 model_df =pd.DataFrame()
 model_df['date']=pd.to_datetime(df_receiptdata['date'], errors='coerce')
 model_df['region']  =df_receiptdata['region']
@@ -119,8 +120,13 @@ model_df = model_df.groupby(['date','region']).agg({'Total number of bags':'sum'
 model_df['weekday'] = model_df['date'].dt.day_name()
 
 
+total_df =df_receiptdata.groupby(['date']).agg({'Total number of bags':'sum'}).reset_index()
+total_df ['date']=pd.to_datetime(total_df ['date'], errors='coerce')
+total_df['weekday'] = total_df['date'].dt.day_name()
 
 
+df_total =total_df[["weekday", 'Total number of bags']].groupby("weekday").describe()
+df_total =df_total .astype(int)
 
 inland_df =model_df[model_df['region']=='inland']
 
@@ -141,11 +147,22 @@ df_coastal =df_coastal .astype(int)
 
 
 
+##########  Number of Registration ###################
+num_reg ['date']=pd.to_datetime(num_reg ['date'], errors='coerce')
+num_reg['weekday'] = num_reg['date'].dt.day_name()
+
+df_reg =num_reg[["weekday", 'number_of_registration']].groupby("weekday").describe()
+df_reg=df_reg.astype(int)
+
+#reg_df =num_reg.groupby(['date']).agg({'number_of_registration':'sum'}).reset_index()
+
+
+
+
+
 if st.button( "Get Performance Target"):
 
-    
-
-    
+       
 
     container = st.container()
     col1,col2,col3,col4,col5 = st.columns(5)
@@ -155,16 +172,21 @@ if st.button( "Get Performance Target"):
             st.empty()
 
         with col2:
-            st.markdown("<h5 style='text-align: center; color: black;'>Inland Peformance Target</h5>", unsafe_allow_html=True)
+
+            st.markdown("<h5 style='text-align: center; color: black;'>Registartion Targets</h5>", unsafe_allow_html=True)
         
-            st.dataframe(df_inland["Total number of bags"]["50%"])
+            st.dataframe(df_reg['number_of_registration']["50%"])
 
         with col3:
 
-            st.empty()
+
+            st.markdown("<h5 style='text-align: center; color: black;'>Inland Peformance Targets</h5>", unsafe_allow_html=True)
+            st.dataframe(df_inland["Total number of bags"]["50%"])
+
+
 
         with col4:
-            st.markdown("<h5 style='text-align: center; color: black;'>Coastal Peformance Target</h5>", unsafe_allow_html=True)
+            st.markdown("<h5 style='text-align: center; color: black;'>Coastal Peformance Targets</h5>", unsafe_allow_html=True)
             st.dataframe (df_coastal["Total number of bags"]["50%"])
         
         with col5:
@@ -178,34 +200,95 @@ if st.button( "Get Performance Target"):
 
 
 
-if st.button( "Get Performance Statistics"):
-
-    if st.checkbox('Show Overall Weekday Performance Statistics'):
-        region_df = model_df[["weekday", 'Total number of bags']].groupby("weekday").describe()
-
-        region_df  = region_df .astype(int)
-        st.dataframe(region_df)
-
-        csv = region_df.to_csv(index=True, sep=',')
-
-        st.download_button(label="Download data as CSV",data=csv,file_name='Weekday Performance statistics.csv',mime='text/csv', )
 
 
-    if st.checkbox('Show Inland Performance Statistics'):
+# Create Radio Buttons
+
+if st.checkbox('Get Statistics'):
+
+    selected_button = st.radio(label = 'Get Performance Target', options = ['Registration Performance Statistics','Inland Performance Statistics','Coastal Performance Statistics'])
+    st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
+
+    if selected_button == 'Registration Performance Statistics':
+
+        st.dataframe(df_reg)
 
 
+        #st.dataframe(df_total)
+
+        #csv = df_total.to_csv(index=True, sep=',')
+
+        #st.download_button(label="Download data as CSV",data=csv,file_name='Weekday Performance statistics.csv',mime='text/csv', )
+
+
+    if selected_button == 'Inland Performance Statistics':
         st.dataframe(df_inland)
 
-        csv = df_inland.to_csv(index=True, sep=',')
+        #csv = df_inland.to_csv(index=True, sep=',')
 
-        st.download_button(label="Download data as CSV",data=csv,file_name='Inland Performance statistics.csv',mime='text/csv', )
-
-
-    if st.checkbox('Show Coastal Performance Statistics'):
+        #st.download_button(label="Download data as CSV",data=csv,file_name='Inland Performance statistics.csv',mime='text/csv', )
 
 
 
+    if selected_button == 'Coastal Performance Statistics':
         st.dataframe(df_coastal)
 
-        csv = df_coastal.to_csv(index=True, sep=',')
-        st.download_button(label="Download data as CSV",data=csv,file_name='Coastal Performance statistics.csv',mime='text/csv', )
+        #csv = df_coastal.to_csv(index=True, sep=',')
+        #st.download_button(label="Download data as CSV",data=csv,file_name='Coastal Performance statistics.csv',mime='text/csv', )
+
+
+
+    import xlsxwriter
+
+
+    output = BytesIO()
+
+    # Write files to in-memory strings using BytesIO
+    # See: https://xlsxwriter.readthedocs.io/workbook.html?highlight=BytesIO#constructor
+    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+    worksheet = workbook.add_worksheet()
+
+
+
+
+    # Create a Pandas Excel writer using XlsxWriter as the engine.
+    writer = pd.ExcelWriter('report.xlsx', engine='xlsxwriter')
+
+    # Convert the dataframe to an XlsxWriter Excel object.
+    df_total.to_excel(writer, sheet_name='Overall Performance Target')
+    df_inland.to_excel(writer, sheet_name='Inland Performance Target')
+    df_coastal.to_excel(writer, sheet_name='Coastal Perfromance Targets')
+    df_reg.to_excel(writer, sheet_name='Registration Targets')
+
+
+
+    writer.save()
+
+
+    #data = pd.read_excel (r'report.xlsx')
+    #st.download_button(label="Download Excel workbook",data=data, file_name="workbook.xlsx",mime="application/vnd.ms-excel")
+
+
+    #
+    #workbook  = writer.book
+    #worksheet = writer.sheets['Overall Performance Target']
+
+
+    #st.download_button(label="Download Excel workbook", data=output.getvalue(),file_name="workbook.xlsx",mime="application/vnd.ms-excel" )
+
+
+    
+
+    #st.download_button(label = 'Download  Report',data =output.getvalue(),file_name = 'Report.xlsx')
+
+
+
+    #st.download_button(label = 'Download  Report',data = output.getvalue() ,file_name ='report.xlsx')
+   # writer.close()
+
+    #st.download_button(label="Download Excel workbook",data=output.getvalue(), file_name="workbook.xlsx",mime="application/vnd.ms-excel")
+
+
+    
+
+
