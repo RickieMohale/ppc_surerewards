@@ -42,8 +42,8 @@ from streamlit_metrics import metric, metric_row
 import pymysql
 
 
-import warnings
-warnings.filterwarnings("ignore")
+#import warnings
+##warnings.filterwarnings("ignore")
 
 ## hiding warnings
 st.set_option('deprecation.showPyplotGlobalUse', False)
@@ -95,6 +95,9 @@ from io import BytesIO
 
 #tweet_cv = joblib.load(news_vectorizer) # loading your vectorizer from the pkl file
 
+
+
+## Show the latest Update Time
 
 
 
@@ -168,6 +171,7 @@ def main():
 
 
 
+
 	def line_graph(source, x, y):
 		# Create a selection that chooses the nearest point & selects based on x-value
 		hover = alt.selection_single(fields=[x],nearest=True,on="mouseover",empty="none",	)
@@ -226,7 +230,7 @@ def main():
 	# Creating sidebar with selection box -
 	# you can create multiple pages this way
 	
-	options = ["Surerewards Customers", "Customer Profiling","Performance Target Page","Product Performance","Auto Reports"]
+	options = ["Surerewards Informatics", "Customer Profiling","Performance Target Page","Product Performance","Auto Reports"]
 	#
 
 	selection = st.sidebar.radio("Select Page:",options)
@@ -271,27 +275,9 @@ def main():
 			#st.info("The model trained is LSTM ( Long Short Term Memory) model,which falls under Recurrent Neural Network models. This model is a Time Series Model that uses historical data for forecasting/ predicting the number of bags in the upcoming 7 days")			
 		
 
-			
+					
 
-
-
-
-
-
-
-
-			
-
-
-
-
-
-
-		
-
-		
-
-	if selection == "Surerewards Customers":
+	if selection == "Surerewards Informatics":
 
 		exec(open("./pages/surerewards_customer_page.py").read())
 

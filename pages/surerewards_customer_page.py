@@ -3,29 +3,18 @@
 
 
 
-st.markdown("<h1 style='text-align: center; color: red;'>Surerewards Customers Insights Page</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: red;'>Surerewards Informatics Page</h1>", unsafe_allow_html=True)
 
 
 
 
+from datetime import datetime
+SA_time = pytz.timezone('Africa/Johannesburg') 
+datetime_SA = datetime.now(SA_time)
+metric("Latest Time Update", datetime_SA.strftime('%Y-%m-%d %H:%M %p'))
 
 
 
-
-
-
-col1, col2 = st.columns((1,1))
-
-with col1:
-
-    st.info("The following visuals are based on real time data from the surerewards platform (They change with time)")
-    
-with col2:
-    ## Show the latest Update Time
-    from datetime import datetime
-    SA_time = pytz.timezone('Africa/Johannesburg') 
-    datetime_SA = datetime.now(SA_time)
-    metric("Latest Time Update", datetime_SA.strftime('%Y-%m-%d %H:%M %p'))
 
 
 
@@ -132,19 +121,6 @@ st.markdown("<h3 style='text-align: center; color: red;'>Number of  Customers</h
 
 
 
-########################## description ##########################3
-container = st.container()
-col1, col2= st.columns(2)
-
-with container:
-    with col1:
-        st.info( "Existing customers is customers who registered before 15-Feb-2-2022 ")	
-
-    with col2:
-        st.info( "PPC130 customers is customers who registered from 15-Feb-2-2022")
-########################################################################3
-
-
 
 
 
@@ -229,10 +205,6 @@ total_sms_date =len(list(sms_numbers_on_date['body']))
 withdrawm_no =sms_numbers_on_date[sms_numbers_on_date['body'].str.contains('withdraw')]['body'].count()
 succes_no =sms_numbers_on_date[sms_numbers_on_date['body'].str.contains('successfully captured')]['body'].count()
 less_bag_no =sms_numbers_on_date[sms_numbers_on_date['body'].str.contains('Miss Out')]['body'].count()
-
-
-
-st.info ('A total  of '+ str( sms_numbers['Number_Of_SMS_Sent'].sum() )+' SMSes have been sent during the PPC130 campaign.From the SMSes sent ,'+str(withdrawm_no)+' was about withdrawal request,which is '+str(round((withdrawm_no/total_sms_date)*100))+'% of the total SMS sent.'+str(succes_no )+' was about successfully captured receipts, which is '+str(round((succes_no/total_sms_date)*100))+'%  of the total SMS sent.'+str(less_bag_no)+' was SMS sent to customers who bought less than 10 bags, which is '+str(round((less_bag_no/total_sms_date)*100))+'%  of the total SMS sent.')
 
 
 
@@ -401,7 +373,6 @@ yest_con_rate = round(float(prev_day_rcpt["no_of_receipts_upload"].sum()/ prev_d
 
 
 
-
 container = st.container()
 col1, col2= st.columns(2)
 
@@ -409,8 +380,8 @@ with container:
     
     with col1:
         
-        option = { "tooltip": { "trigger": 'axis', "axisPointer": { "type": 'shadow'}},"legend": {},"grid": {"left": '3%',"right": '4%',"bottom": '3%',"containLabel": "true"},"xAxis": {"type": 'value',"boundaryGap": [0, 0.01]},
-        "yAxis": {"type": 'category',"data": ['Previous Month', 'Previous week', 'Previous Day', ]},
+        option = {"tooltip": { "trigger": 'axis', "axisPointer": { "type": 'shadow'}},"legend": {},"grid": {"left": '3%',"right": '4%',"bottom": '3%',"containLabel": "true"},"xAxis": {"type": 'value',"boundaryGap": [0, 0.01]},
+        "yAxis": {"type": 'category',"data": ['Previous Month', 'Previous week', 'Previous Day', ]},"label": {"show": "true","position": 'right',"valueAnimation": "true"},
         "series": [{"name": 'Customer Registration',"type": 'bar',"data": [ int(total_reg_prev_month["count"].sum()), int(prev_week_reg['count'].sum()), int(prev_day_reg["count"].sum())]},{"name": 'Receipt Upload',"type": 'bar',"data": [int(prev_month_recpt["no_of_receipts_upload"].sum()),int(prev_week_recpt["no_of_receipts_upload"].sum()),int(prev_day_rcpt["no_of_receipts_upload"].sum())]}]}
         st_echarts(options=option, width="100%", key=18) 
                 
@@ -418,11 +389,10 @@ with container:
 
     with col2:
         
-        options = {"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
+        options = {"title": {"text": 'PPC130 Overall Conversion',"left": 'center'},"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
         "progress": { "width": 10},"detail": {"valueAnimation": "true", "formatter": "{value}"},"data": [{"value":ovr_con_rate, "name": "Score"}],}],}
         st_echarts(options=options, width="100%", key=11),
-        st.markdown("<h6 style='text-align: center; color: black;'>Overall Conversion Rate During PPC130 Campaign</h6>", unsafe_allow_html=True)
-
+   
 
 
 
@@ -431,28 +401,26 @@ col1, col2,col3= st.columns(3)
 
 with container:
     with col1:
-        options = {"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
+        options = {"title": {"text": 'last Month Conversion',"left": 'center'},"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
         "progress": { "width": 10},"detail": {"valueAnimation": "true", "formatter": "{value}"},"data": [{"value":last_mon_rate, "name": "Score"}],}],}
 
         st_echarts(options=options, width="100%", key=111),
-        st.markdown("<h6 style='text-align: center; color: black;'>last Month's Conversion Rate</h6>", unsafe_allow_html=True) 
+    
 
     with col2:
 
-        options = {"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
+        options = {"title": {"text": 'last Week Conversion',"left": 'center'},"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
         "progress": { "width": 10},"detail": {"valueAnimation": "true", "formatter": "{value}"},"data": [{"value":weekly_con_rate, "name": "Score"}],}],}
 
         st_echarts(options=options, width="100%", key=12) 
-        st.markdown("<h6 style='text-align: center; color: black;'>last Weeks's Conversion Rate</h6>", unsafe_allow_html=True) 
+       
     
     with col3:
 
-        options = {"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
+        options = {"title": {"text": 'Yesterday Conversion',"left": 'center'},"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
         "progress": { "width": 10},"detail": {"valueAnimation": "true", "formatter": "{value}"},"data": [{"value":yest_con_rate, "name": "Score"}],}],}
 
         st_echarts(options=options, width="100%", key=14) 
-        st.markdown("<h6 style='text-align: center; color: black;'>yesterday's Conversion Rate</h6>", unsafe_allow_html=True) 
-
 
 
 
@@ -495,11 +463,11 @@ with container:
     
     with col3:
 
-        options = {"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
+        options = {"title": {"text": 'Overall Conversion rate',"left": 'center'},"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
         "progress": { "width": 10},"detail": {"valueAnimation": "true", "formatter": "{value}"},"data": [{"value":e_ovr_con_rate, "name": "Score"}],}],}
 
         st_echarts(options=options, width="100%", key=118),
-        st.markdown("<h6 style='text-align: center; color: black;'>Overall Conversion Rate</h6>", unsafe_allow_html=True) 
+
 
 
 
@@ -509,23 +477,22 @@ col1, col2,col3= st.columns(3)
 
 with container:
     with col1:
-        options = {"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
+        options = {"title": {"text": 'Last Month Conversion',"left": 'center'},"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
         "progress": { "width": 10},"detail": {"valueAnimation": "true", "formatter": "{value}"},"data": [{"value":e_last_mon_rate, "name": "Score"}],}],}
 
         st_echarts(options=options, width="100%", key=15),
-        st.markdown("<h6 style='text-align: center; color: black;'>last Month's Conversion Rate</h6>", unsafe_allow_html=True) 
+       
 
     with col2:
 
-        options = {"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
+        options = {"title": {"text": 'Last Week Conversion',"left": 'center'},"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
         "progress": { "width": 10},"detail": {"valueAnimation": "true", "formatter": "{value}"},"data": [{"value":e_weekly_con_rate, "name": "Score"}],}],}
 
         st_echarts(options=options, width="100%", key=16) 
-        st.markdown("<h6 style='text-align: center; color: black;'>last Weeks's Conversion Rate</h6>", unsafe_allow_html=True) 
-    
+
     with col3:
 
-        options = {"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
+        options = {"title": {"text": 'Yesterday Conversion',"left": 'center'},"tooltip": {"formatter": "{a} <br/>{b} : {c}%"},"series": [{"name": "Conversion Rate","type": "gauge","axisLine": {"lineStyle": {"color": [[0.2, '#FF0000'],[0.8, '#1e90ff'],[1, '#009900']],"width": 10},},
         "progress": { "width": 10},"detail": {"valueAnimation": "true", "formatter": "{value}"},"data": [{"value":e_yest_con_rate, "name": "Score"}],}],}
 
         st_echarts(options=options, width="100%", key=17) 
@@ -584,6 +551,10 @@ with container:
 
 
 
+st.markdown("<h3 style='text-align: center; color: red;'>Surerewards Customer  Communications</h3>", unsafe_allow_html=True)
+
+
+
 
 total_sms_date =len(list(sms_numbers_on_date['body']))
 withdrawm_no =sms_numbers_on_date[sms_numbers_on_date['body'].str.contains('withdraw')]['body'].count()
@@ -614,6 +585,10 @@ with container:
         "restore": { "show": "true" }}}, "series": [ { "name": 'Receipt Validation', "type": 'pie', "radius": [50, 100],"center": ['50%', '50%'],
         "roseType": '',"itemStyle": {"borderRadius": 8},"label": {"show": "false"},"emphasis": {"label": {"show": "true"}},"data": [{ "value": int(withdrawm_no), "name": 'withdrawal SMS' },{ "value":int(succes_no), "name": 'Successfully Captured SMS'},{ "value":int(less_bag_no), "name": 'SMS For Less Than 10 bags'}]}]}
         st_echarts(options=sms_split, width="100%", key=24) 
+
+
+
+st.info ('A total  of '+ str( sms_numbers['Number_Of_SMS_Sent'].sum() )+' SMSes have been sent during the PPC130 campaign.From the SMSes sent ,'+str(withdrawm_no)+' was about withdrawal request,which is '+str(round((withdrawm_no/total_sms_date)*100))+'% of the total SMS sent.'+str(succes_no )+' was about successfully captured receipts, which is '+str(round((succes_no/total_sms_date)*100))+'%  of the total SMS sent.'+str(less_bag_no)+' was SMS sent to customers who bought less than 10 bags, which is '+str(round((less_bag_no/total_sms_date)*100))+'%  of the total SMS sent.')
 
 
 
@@ -681,19 +656,19 @@ with container:
     with col1:
 
         metric("Total Withdrawal Amount",  withdraw_by_date['amount'].sum() )
-        metric("Last Month  Withdrawal Amount", 0 )
+        metric("Last Month  Withdrawal Amount", '##' )
 
 
 
     with col2:
 
         metric("Total Number of Withdrawls", int(None_count['count'][0]+ewallet_count['count'][0]+account_count['count'][0]) )
-        metric("Last Week Withdrawal Amount" ,  0 )
+        metric("Last Week Withdrawal Amount" ,  '##' )
 
     with col3:
 
-        metric("Aearage Withdrawl Amount",  round(withdraw_by_date['amount'].mean(),2) )
-        metric("Yesterday Withdrawal Amount", 0 )
+        metric("Average Withdrawl Amount",  round(withdraw_by_date['amount'].mean(),2) )
+        metric("Yesterday Withdrawal Amount", '##' )
   
  
     with col4:
