@@ -252,8 +252,7 @@ def main():
 
 		exec(open("./pages/performance_target_page.py").read())
 
-		
-		
+			
 	if selection == "Customer Profiling":
 
 		exec(open("./pages/customer_profile_page.py").read())
